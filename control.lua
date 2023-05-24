@@ -1,11 +1,49 @@
 StorageInventory = nil;
-ExchangeRate = {
-    ["iron-plate"] = 1,
-    ["copper-plate"] = 2,
-}
-EMC = 100;
+EMC = 1;
 EMCOverflow = 0;
 PreviousStorage = {};
+
+global.ExchangeRate = {}
+
+local function CalculateRecipeCost(recipe)
+    if recipe == nil then return 1 end
+
+    local cost = 0;
+    for _, ingredient in pairs(recipe.ingredients) do
+        local rate = CalculateRecipeCost(game.recipe_prototypes[ingredient.name])
+        cost = cost + (ingredient.amount * rate)
+        if game.item_prototypes[ingredient.name] ~= nil and cost > 0 then
+            global.ExchangeRate[ingredient.name] = rate;
+        end
+    end
+    if cost > 0 then
+        for _, product in pairs(recipe.products) do
+            if (game.item_prototypes[product.name] ~= nil) then 
+                global.ExchangeRate[product.name] = cost
+            end
+        end
+    end
+    return cost;
+end
+
+script.on_init(function()
+    global.ExchangeRate = {}
+    for _, recipe in pairs(game.recipe_prototypes) do
+        CalculateRecipeCost(recipe)
+    end
+end)
+
+function GetDictionaryLength(dictionary)
+    local count = 0
+    for key, value in pairs(dictionary) do
+        count = count + 1
+    end
+    return count
+end
+
+local function isNaN(num)
+    return num ~= num
+end
 
 function PopulateStorage()
     if StorageInventory == nil then
@@ -20,14 +58,12 @@ function PopulateStorage()
         return
     end
 
-    for name, rate in pairs(ExchangeRate) do
+    for name, rate in pairs(global.ExchangeRate) do
         local count = math.floor(EMC / rate);
-        local item_prototype = game.item_prototypes[name]
-        local max_stack_size = item_prototype.stack_size
 
         if (count >= 1) then
             -- Limit count to the max stack size
-            count = math.min(count, max_stack_size)
+            count = math.min(count, game.item_prototypes[name].stack_size)
 
             EMCOverflow = EMCOverflow + EMC % rate;
 
@@ -35,7 +71,6 @@ function PopulateStorage()
             PreviousStorage[name] = count;
         end
     end
-    
 end
 
 function OnCreate(event)
@@ -54,6 +89,11 @@ function OnDestroy(event)
 end
 
 function OnTick(event)
+    if (event.tick % 120 == 0) then
+        for _, recipe in pairs(game.recipe_prototypes) do
+            CalculateRecipeCost(recipe)
+        end
+    end
     if StorageInventory ~= nil then
         local emcChange = 0;
 
@@ -69,10 +109,12 @@ function OnTick(event)
         for name in pairs(combinedKeys) do
             local newCount = storageContents[name] or 0
             local oldCount = PreviousStorage[name] or 0
-            emcChange = emcChange + (newCount - oldCount) * (ExchangeRate[name] or 0)
+            emcChange = emcChange + (newCount - oldCount) * (global.ExchangeRate[name] or 0)
         end
 
         EMC = math.max(0, EMC + emcChange + EMCOverflow);
+
+        
 
         PopulateStorage()
     end
