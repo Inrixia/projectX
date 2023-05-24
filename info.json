@@ -1,0 +1,11 @@
+{
+  "name": "projectX",
+  "version": "1.0.0",
+  "title": "projectX",
+  "author": "Inrixia",
+  "factorio_version": "1.1",
+  "dependencies": [
+    "base >= 1.1"
+  ],
+  "description": "Everthing can be obtained from nothing"
+}
