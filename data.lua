@@ -1,1 +1,3 @@
-require("prototypes/exchange/data")
+local Requester = require("prototypes/Requester")
+
+Requester:BuildProto()
