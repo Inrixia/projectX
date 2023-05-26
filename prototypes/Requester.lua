@@ -48,12 +48,27 @@ end
 
 function Requester:OnTick(event)
 	for unit_number, requesterChest in pairs(global.Requesters) do
-		for i, request in ipairs(getMissingRequests(requesterChest)) do
-			local pickupPoint = requesterChest.logistic_network.select_pickup_point{name=request.name}
-			if pickupPoint == nil then return end
-			
-			local distance = calculateEntityDistance(pickupPoint.owner.position, requesterChest.position)
-			if distance > 0 then return end
+		if (requesterChest.logistic_network ~= nil) then
+			for i, request in ipairs(getMissingRequests(requesterChest)) do
+				while request.count > 0 do
+					local pickupPoint = requesterChest.logistic_network.select_pickup_point{name=request.name}
+					if pickupPoint == nil then
+						break
+					end
+					-- local distance = calculateEntityDistance(pickupPoint.owner.position, requesterChest.position)
+					local pickupInventory = pickupPoint.owner.get_inventory(defines.inventory.chest)
+					local requesterInventory = requesterChest.get_inventory(defines.inventory.chest)
+					
+					local pickupInventoryAvalible = pickupInventory.get_item_count(request.name)
+
+					local transferAmount = math.min(pickupInventoryAvalible, request.count)
+					if transferAmount > 0 then
+						pickupInventory.remove{name = request.name, count = transferAmount}
+						requesterInventory.insert{name = request.name, count = transferAmount}
+						request.count = request.count - transferAmount
+					end
+				end
+			end
 		end
 	end
 end
