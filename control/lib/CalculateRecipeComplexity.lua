@@ -1,11 +1,11 @@
 global.StorageContainers = {}
 
-local function CalculateRecipeComplexity(recipe)
+local function calculateRecipeComplexity(recipe)
     if recipe == nil then return 1 end
 
     local cost = 0;
     for _, ingredient in pairs(recipe.ingredients) do
-        local rate = CalculateRecipeComplexity(game.recipe_prototypes[ingredient.name])
+        local rate = calculateRecipeComplexity(game.recipe_prototypes[ingredient.name])
         cost = cost + (ingredient.amount * rate)
         if game.item_prototypes[ingredient.name] ~= nil and cost > 0 then
             global.ExchangeRate[ingredient.name] = rate;
@@ -21,11 +21,11 @@ local function CalculateRecipeComplexity(recipe)
     return cost;
 end
 
-local function CalculateRecipiesComplexity()
+local function calculateRecipiesComplexity()
 	global.ExchangeRate = {}
     for _, recipe in pairs(game.recipe_prototypes) do
-        CalculateRecipeComplexity(recipe)
+        calculateRecipeComplexity(recipe)
     end
 end
 
-return CalculateRecipiesComplexity
+return calculateRecipiesComplexity

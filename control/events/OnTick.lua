@@ -1,5 +1,7 @@
+local Requester = require("prototypes/Requester")
+
 local function OnTick(event)
-	local a = global.Requesters
+	Requester:OnTick(event)
 end
 
 return OnTick;

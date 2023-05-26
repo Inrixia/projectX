@@ -1,9 +1,9 @@
-local CalculateRecipiesComplexity = require("control/lib/CalculateRecipeComplexity.lua")
+local calculateRecipiesComplexity = require("control/lib/calculateRecipeComplexity.lua")
 local Requester = require("prototypes/Requester")
 
-local function OnInit()
-	CalculateRecipiesComplexity()
-	Requester:OnInit()
+local function OnInit(event)
+	calculateRecipiesComplexity()
+	Requester:OnInit(event)
 end
 
 return OnInit;
