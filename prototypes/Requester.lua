@@ -31,12 +31,14 @@ function Requester:BuildProto()
 end
 
 function Requester:OnCreate(event)
+	-- TODO: FIX Handlers as event is multiple types
 	if event.created_entity.name ~= Requester.name then return end
 	local entity = event.created_entity
 	global.Requesters[entity.unit_number] = entity
 end
 
 function Requester:OnDestroy(event)
+	-- TODO: FIX Handlers as event is multiple types
 	if event.entity.name ~= Requester.name then return end
 	local entity = event.entity
 	global.Requesters[entity.unit_number] = nil
@@ -47,42 +49,44 @@ function Requester:OnInit(event)
 end
 
 function Requester:OnTick(event)
-	for unit_number, requesterChest in pairs(global.Requesters) do
+	if event.tick % 20 ~= 0 then return end
 
-		if requesterChest.logistic_network == nil then goto continue end
+	for unit_number, requesterChest in pairs(global.Requesters) do
+		if requesterChest.logistic_network == nil then goto nextChest end
 
 		local nearestCell = requesterChest.logistic_network.find_cell_closest_to(requesterChest.position)
-		if (nearestCell.owner == nil) then goto continue end
-		if (nearestCell.owner.energy < 100000) then goto continue end
+		if (nearestCell.owner == nil) then goto nextChest end
+		if (nearestCell.owner.energy < 100000) then goto nextChest end
 
-		for i, request in pairs(getMissingRequests(requesterChest)) do
-			while request.count > 0 do
-				local pickupPoint = requesterChest.logistic_network.select_pickup_point{name=request.name}
+		for i, itemRequest in pairs(getMissingRequests(requesterChest)) do
+			while itemRequest.count > 0 do
+				local pickupPoint = requesterChest.logistic_network.select_pickup_point{name=itemRequest.name}
 				if pickupPoint == nil then
 					break
 				end
 				local pickupInventory = pickupPoint.owner.get_inventory(defines.inventory.chest)
 				local requesterInventory = requesterChest.get_inventory(defines.inventory.chest)
 
-				local pickupInventoryAvalible = pickupInventory.get_item_count(request.name)
+				local pickupInventoryAvalible = pickupInventory.get_item_count(itemRequest.name)
 
-				local maxTransferAmount = 1;
+				local maxTransferAmount = 25;
 
 				local transferAmount = math.min(pickupInventoryAvalible, maxTransferAmount)
 				if transferAmount > 0 then
 					local distance = calculateEntityDistance(pickupPoint.owner.position, requesterChest.position)
-					local requiredPower = transferAmount*distance*1000
+					local requiredPower = transferAmount*distance*(global.ExchangeRate[itemRequest.name] or 1)
 
-					if nearestCell.owner.energy < requiredPower then goto continue end
+					if nearestCell.owner.energy < requiredPower then goto nextItem end
 					nearestCell.owner.energy = nearestCell.owner.energy - requiredPower
 
-					pickupInventory.remove{name = request.name, count = transferAmount}
-					requesterInventory.insert{name = request.name, count = transferAmount}
-					request.count = maxTransferAmount - transferAmount
+					pickupInventory.remove{name = itemRequest.name, count = transferAmount}
+					requesterInventory.insert{name = itemRequest.name, count = transferAmount}
+					itemRequest.count = maxTransferAmount - transferAmount
 				end
 			end
+			::nextItem::
 		end
-		::continue::
+		::nextChest::
 	end
 end
 
