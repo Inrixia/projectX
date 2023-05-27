@@ -16,4 +16,4 @@ script.on_event({
     defines.events.on_player_mined_entity
 }, OnDestroy)
 
-script.on_event(defines.events.on_tick, OnTick)
+script.on_nth_tick(15, OnTick)

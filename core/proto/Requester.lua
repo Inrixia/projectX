@@ -6,8 +6,8 @@ local Requester = {
 	entityName = "projectx-requester",
 	itemName = "projectx-requester-item",
 	minTickInterval = 15,
-	maxTickInterval = 240,
-	maxTransferAmount = 25
+	maxTickInterval = 300,
+	maxTransferAmount = 100
 }
 Requester.__index = Requester
 script.register_metatable("projectx-requester-metatable", Requester)
