@@ -13,12 +13,14 @@ Requester.__index = Requester
 script.register_metatable("projectx-requester-metatable", Requester)
 
 -- Instance creation
-function Requester.New(entity)
-	return setmetatable({entity = entity, nextTick = 0, tickInterval = Requester.maxTickInterval}, Requester)
+function Requester.New(entity, tick)
+	local requester = setmetatable({entity = entity, nextTick = 0, tickInterval = Requester.maxTickInterval}, Requester);
+	requester:tickOn(tick+1)
+	return requester
 end
 
 -- Instance methods
-function Requester:setNextTick(hasMoreWork, tick)
+function Requester:getNextTick(hasMoreWork, tick)
 	if hasMoreWork then
 		if self.tickInterval > Requester.minTickInterval then
 			self.tickInterval = self.tickInterval - Requester.minTickInterval;
@@ -28,16 +30,22 @@ function Requester:setNextTick(hasMoreWork, tick)
 			self.tickInterval = self.tickInterval + Requester.minTickInterval;
 		end
 	end
-	self.nextTick = tick + self.tickInterval;
+	return tick + self.tickInterval
+end
+
+function Requester:tickOn(tick)
+	script.on_nth_tick(tick, function(event) 
+		self:onTick(event.tick)
+		script.on_nth_tick(tick, nil)
+	end)
 end
 
 function Requester:onTick(tick)
-	if self.nextTick <= tick then
-		for _, player in pairs(game.players) do
-			player.print(self.tickInterval)
-		end
-		self:setNextTick(self:processRequests(), tick)
+	for _, player in pairs(game.players) do
+		player.print(self.tickInterval)
 	end
+	
+	self:tickOn(self:getNextTick(self:processRequests(), tick))
 end
 
 function Requester:processRequests()
@@ -113,7 +121,7 @@ end
 function Requester.OnCreate(event)
 	-- TODO: FIX Handlers as event is multiple types
 	if event.created_entity.name ~= Requester.entityName then return end
-	global.Requesters[event.created_entity.unit_number] = Requester.New(event.created_entity);
+	global.Requesters[event.created_entity.unit_number] = Requester.New(event.created_entity, event.tick);
 end
 
 function Requester.OnDestroy(event)
@@ -122,9 +130,15 @@ function Requester.OnDestroy(event)
 	global.Requesters[event.entity.unit_number] = nil
 end
 
-function Requester.OnTick(tick)
+-- function Requester.OnTick(tick)
+-- 	for unit_number, requester in pairs(global.Requesters) do
+-- 		requester:onTick(tick)
+-- 	end
+-- end
+
+function Requester.OnLoad(event)
 	for unit_number, requester in pairs(global.Requesters) do
-		requester:onTick(tick)
+		requester:tickOn(1)
 	end
 end
 
