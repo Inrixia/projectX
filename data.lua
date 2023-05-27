@@ -1,3 +1,3 @@
-local Requester = require("prototypes/Requester")
+local Requester = require("core/proto/Requester")
 
 Requester:BuildProto()
