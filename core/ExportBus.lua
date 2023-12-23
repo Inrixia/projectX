@@ -1,44 +1,45 @@
-require("events/onBuilt")
-require("events/onGuiOpened")
-require("events/onGuiSelectionStateChanged")
+local hash = require("lib/hash")
+
+local built = require("events/built")
+local guiOpened = require("events/guiOpened")
+local guiElemChanged = require("events/guiElemChanged")
 
 local protoName = "projectX_export-bus"
-local guiName = protoName .. "_gui"
 
 --- @class ExportBus
 local ExportBus = {}
 
--- Function to create the initial GUI with an item filter box
-local function create_filter_box_gui(player)
-	if player.gui.center.filter_box_gui == nil then
-		local frame = player.gui.center.add { type = "frame", name = "filter_box_gui", direction = "vertical" }
-		frame.add { type = "choose-elem-button", name = "item_filter_button", elem_type = "item" }
-	end
-end
-
---- @param event EventData.on_gui_selection_state_changed
-local function create_item_selection_gui(event)
-	local player = game.players[event.player_index]
-	if player.gui.center.item_selection_gui == nil then
-		local frame = player.gui.center.add { type = "frame", name = "item_selection_gui", direction = "vertical" }
-		local flow = frame.add { type = "flow", name = "item_selection_flow", direction = "horizontal" }
-
-		-- Add buttons for each item
-		for _, item in pairs(game.item_prototypes) do
-			flow.add { type = "sprite-button", name = "item_button_" .. item.name, sprite = "item/" .. item.name }
-		end
-	end
-end
-
 function ExportBus.RegisterEvents()
-	onBuilt(protoName, function(event)
-		event.created_entity.get_inventory(defines.inventory.chest).set_bar(1)
+	built.add(protoName, function(event)
+		local entity = event.created_entity
+		local inventory = entity.get_inventory(defines.inventory.chest)
+
+		if inventory ~= nil then
+			inventory.set_bar(1)
+
+			local guiName = protoName .. "_" .. entity.unit_number
+
+			guiOpened:add(entity.unit_number, function(event)
+				local player = game.players[event.player_index]
+				-- player.opened = nil
+				if player.gui.center[guiName] == nil then
+					local frame = player.gui.center.add { type = "frame", name = guiName, direction = "vertical" }
+					local button = frame.add { type = "choose-elem-button", name = guiName .. "_button", elem_type = "item" }
+					local currentFilter = inventory.get_filter(1);
+					if currentFilter ~= nil then button.elem_value = currentFilter end
+				end
+			end)
+			guiElemChanged:add(guiName .. "_button", function(event)
+				local selected_item = event.element.elem_value;
+				if type(selected_item) == "string" then
+					entity.link_id = hash(selected_item)
+					-- inventory = entity.get_inventory(defines.inventory.chest)
+					inventory.set_filter(1, selected_item)
+					inventory.set_bar()
+				end
+			end)
+		end
 	end)
-	onGuiOpened(protoName, function(event)
-		local player = game.players[event.player_index]
-		player.opened = nil
-	end)
-	onGuiSelectionStateChanged(guiName, create_item_selection_gui)
 end
 
 function ExportBus.CreateProto()
