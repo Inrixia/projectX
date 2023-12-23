@@ -1,3 +1,1 @@
-local Requester = require("core/proto/Requester")
-
-Requester:BuildProto()
+require("core/ExportBus").CreateProto()
