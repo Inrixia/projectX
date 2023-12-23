@@ -1,0 +1,13 @@
+local EventHandler = require("EventHandler")
+
+--- @class GuiElemChanged : EventHandler
+--- @field add fun(self: EventHandler, elementName: string, method: fun(event:EventData.on_gui_elem_changed))
+--- @field remove fun(self: EventHandler, elementName: string)
+local guiElemChanged = EventHandler.new(defines.events.on_gui_elem_changed, function(methods)
+	script.on_event(defines.events.on_gui_elem_changed, function(event)
+		local method = methods[event.element.name];
+		if method ~= nil then method(event) end
+	end)
+end)
+
+return guiElemChanged
