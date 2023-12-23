@@ -21,27 +21,27 @@ function EntityBase.new(prototypeName)
 	return self
 end
 
---- @param unit_number integer
-function EntityBase:Init(unit_number)
-	if self._onGuiOpened ~= nil then guiOpened:add(unit_number, self._onGuiOpened) end
-end
-
 function EntityBase:RegisterEvents()
 	init(function()
 		if global.entityBases == nil then global.entityBases = {} end
 		if global.entityBases[self.prototypeName] == nil then global.entityBases[self.prototypeName] = {} end
 	end)
 
+	--- @param unit_number integer
+	local function registerEvents(unit_number)
+		if self._onGuiOpened ~= nil then guiOpened:add(unit_number, self._onGuiOpened) end
+	end
+
 	load(function()
 		for unit_number, _ in pairs(global.entityBases[self.prototypeName]) do
-			EntityBase:Init(unit_number)
+			registerEvents(unit_number)
 		end
 	end)
 
 	built.add(self.prototypeName, function(event)
 		local unit_number = event.created_entity.unit_number;
 		global.entityBases[self.prototypeName][unit_number] = true
-		self:Init(unit_number)
+		registerEvents(unit_number)
 
 		if (self._onBuilt ~= nil) then self._onBuilt(event) end
 	end)
@@ -52,7 +52,7 @@ function EntityBase:CreateProto() self._onData() end
 --- @param method onBuilt onBuilt
 function EntityBase:onBuilt(method) self._onBuilt = method end
 
---- @param method onGuiOpened onGuiOpened
+--- @param method onGuiClosed onGuiOpened
 function EntityBase:onGuiOpened(method) self._onGuiOpened = method end
 
 --- @param method fun()

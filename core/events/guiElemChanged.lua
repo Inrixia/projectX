@@ -1,20 +1,15 @@
+local indexHash = require("indexHash")
 local EventHandler = require("EventHandler")
 
-local function indexHash(player_index, element_index)
-	local global_index = 5381
-	global_index = (global_index * 33) + player_index
-	global_index = (global_index * 33) + element_index
-	return global_index
-end
 
 --- @alias onGuiElemChanged fun(event:EventData.on_gui_elem_changed)
 
 --- @class GuiElemChanged : EventHandler
---- @field add fun(self: EventHandler, elementName: string, method: onGuiElemChanged)
---- @field remove fun(self: EventHandler, elementName: string)
+--- @field add fun(self: EventHandler, index: integer, method: onGuiElemChanged)
+--- @field remove fun(self: EventHandler, index: integer)
 local guiElemChanged = EventHandler.new(defines.events.on_gui_elem_changed, function(methods)
 	script.on_event(defines.events.on_gui_elem_changed, function(event)
-		local method = methods[indexHash(event.player_index, event.element.index)];
+		local method = methods[indexHash(event.element.index, event.player_index)];
 		if method ~= nil then method(event) end
 	end)
 end)

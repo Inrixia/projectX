@@ -1,16 +1,17 @@
-local handlers = nil
+local EventHandler = require("EventHandler")
+local initHandlers = nil
 
 --- @param method fun()
 function init(method)
-	if (handlers == nil) then
-		handlers = {}
+	if (initHandlers == nil) then
+		initHandlers = {}
 		script.on_init(function()
-			for _, handler in pairs(handlers) do
+			for _, handler in pairs(initHandlers) do
 				handler()
 			end
 		end)
 	end
-	table.insert(handlers, method)
+	table.insert(initHandlers, method)
 end
 
 return init

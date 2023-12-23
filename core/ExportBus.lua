@@ -1,6 +1,7 @@
 local hash = require("lib/hash")
 
 local guiElemChanged = require("events/guiElemChanged")
+local guiClosed = require("events/guiClosed")
 
 local EntityBase = require("EntityBase")
 
@@ -9,24 +10,27 @@ local exportBus = EntityBase.new("projectX_export-bus")
 exportBus:onBuilt(function(event)
 	event.created_entity.get_inventory(defines.inventory.chest).set_bar(1)
 end)
-exportBus:onGuiOpened(function(event)
-	local entity = event.entity
+exportBus:onGuiOpened(function(openedEvent)
+	local entity = openedEvent.entity
 	if entity == nil then return end
 
-	local inventory = entity.get_inventory(defines.inventory.chest).set_bar(1)
+	local inventory = entity.get_inventory(defines.inventory.chest)
 	if inventory == nil then return end
 
-	local player = game.players[event.player_index]
+	local player = game.players[openedEvent.player_index]
 	-- player.opened = nil
-	if player.gui.center[exportBus.prototypeName] == nil then
-		local frame = player.gui.center.add { type = "frame", name = exportBus.prototypeName, direction = "vertical" }
+
+	local guiName = tostring(entity.unit_number)
+	local protoElement = player.gui.center[guiName]
+	if protoElement == nil then
+		local frame = player.gui.center.add { type = "frame", name = guiName, direction = "vertical" }
 		local button = frame.add { type = "choose-elem-button", elem_type = "item" }
 
 		local currentFilter = inventory.get_filter(1);
 		if currentFilter ~= nil then button.elem_value = currentFilter end
 
-		guiElemChanged.add(button, player, function(event)
-			local selected_item = event.element.elem_value;
+		guiElemChanged.add(button, player, function(changedEvent)
+			local selected_item = changedEvent.element.elem_value;
 			if type(selected_item) == "string" then
 				entity.link_id = hash(selected_item)
 				inventory.set_filter(1, selected_item)
@@ -37,11 +41,11 @@ exportBus:onGuiOpened(function(event)
 end)
 
 exportBus:onData(function()
-	local invisibleChest = table.deepcopy(data.raw["linked-container"]["linked-chest"])
-	invisibleChest.name = exportBus.prototypeName
-	invisibleChest.inventory_size = 1
-	invisibleChest.inventory_type = "with_filters_and_bar"
-	invisibleChest.gui_mode = "none"
+	local chest = table.deepcopy(data.raw["linked-container"]["linked-chest"])
+	chest.name = exportBus.prototypeName
+	chest.inventory_size = 1
+	chest.inventory_type = "with_filters_and_bar"
+	chest.gui_mode = "none"
 
 	-- Item
 	local item = table.deepcopy(data.raw.item["transport-belt"])
@@ -63,6 +67,8 @@ exportBus:onData(function()
 		},
 		result = exportBus.prototypeName,
 	}
+
+	data:extend { chest, item, recipe }
 end)
 
 return exportBus
