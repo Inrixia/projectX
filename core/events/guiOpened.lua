@@ -1,7 +1,9 @@
 local EventHandler = require("EventHandler")
 
+--- @alias onGuiOpened fun(event:EventData.on_gui_opened)
+
 --- @class GuiOpened : EventHandler
---- @field add fun(self: EventHandler, unit_number: integer, method: fun(event:EventData.on_gui_opened))
+--- @field add fun(self: EventHandler, unit_number: integer, method: onGuiOpened)
 --- @field remove fun(self: EventHandler, unit_number: integer)
 local guiOpened = EventHandler.new(defines.events.on_gui_opened, function(methods)
 	script.on_event(defines.events.on_gui_opened, function(event)
