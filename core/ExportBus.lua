@@ -35,22 +35,27 @@ local exportBus = EntityBase.new("projectX_export-bus", function(prototypeName)
 end)
 
 --- @class ExportBusStorage
---- @field filterButton GuiElement
+--- @field guiElement GuiElement
 --- @field entity LuaEntity
 
 --- @param storage ExportBusStorage
 exportBus:onBuilt(function(event, storage)
 	storage.entity = event.created_entity
 	storage.entity.get_inventory(defines.inventory.chest).set_bar(1)
-	storage.filterButton = GuiElement.new(storage.entity.prototype.name .. "button", {
-		type = "choose-elem-button",
-		elem_type = "item"
+	storage.guiElement = GuiElement.new(storage.entity.prototype.name, {
+		type = "frame",
+		direction = "vertical"
+	}, {
+		itemFilterButton = {
+			type = "choose-elem-button",
+			elem_type = "item"
+		}
 	})
 end)
 
 --- @param storage ExportBusStorage
 exportBus:onLoad(function(storage)
-	storage.filterButton:onChanged(function(changedEvent)
+	storage.guiElement.children.itemFilterButton:onChanged(function(changedEvent)
 		local selected_item = changedEvent.element.elem_value
 		local entity = storage.entity
 		if type(selected_item) == "string" then
@@ -75,20 +80,9 @@ exportBus:onGuiOpened(function(openedEvent, storage)
 	local playerGui = game.players[openedEvent.player_index].gui.center
 	-- player.opened = nil
 
-	local guiElement = nil
-	for _, element in ipairs(playerGui.children) do
-		if element.name == entity.prototype.name then
-			guiElement = element
-		end
-	end
-
-	if guiElement == nil then
-		local frame = playerGui.add { type = "frame", name = entity.prototype.name, direction = "vertical" }
-
-		local button = storage.filterButton:addTo(frame)
-		local currentFilter = inventory.get_filter(1);
-		if currentFilter ~= nil then button.elem_value = currentFilter end
-	end
+	local guiInstance = storage.guiElement:tryAddTo(playerGui)
+	local currentFilter = inventory.get_filter(1);
+	if currentFilter ~= nil then guiInstance:child("itemFilterButton").elem_value = currentFilter end
 end)
 
 return exportBus

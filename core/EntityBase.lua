@@ -17,6 +17,10 @@ local guiOpened = require("events/guiOpened")
 local EntityBase = {}
 EntityBase.__index = EntityBase
 
+if script then
+	script.register_metatable("EntityBase", EntityBase)
+end
+
 --- @param prototypeName string
 --- @param atData atData
 function EntityBase.new(prototypeName, atData)
