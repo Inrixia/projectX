@@ -35,12 +35,14 @@ local exportBus = EntityBase.new("projectX_export-bus", function(prototypeName)
 end)
 
 --- @class ExportBusStorage
---- @field guiElement GuiElement
+--- @field filterButton GuiElement
+--- @field entity LuaEntity
 
 --- @param storage ExportBusStorage
 exportBus:onBuilt(function(event, storage)
-	event.created_entity.get_inventory(defines.inventory.chest).set_bar(1)
-	storage.guiElement = GuiElement.new(event.created_entity.prototype.name, {
+	storage.entity = event.created_entity
+	storage.entity.get_inventory(defines.inventory.chest).set_bar(1)
+	storage.filterButton = GuiElement.new(storage.entity.prototype.name .. "button", {
 		type = "choose-elem-button",
 		elem_type = "item"
 	})
@@ -48,9 +50,9 @@ end)
 
 --- @param storage ExportBusStorage
 exportBus:onLoad(function(storage)
-	storage.guiElement:onChanged(function(changedEvent)
-		local selected_item = changedEvent.element.elem_value;
-		local entity = changedEvent.element.entity
+	storage.filterButton:onChanged(function(changedEvent)
+		local selected_item = changedEvent.element.elem_value
+		local entity = storage.entity
 		if type(selected_item) == "string" then
 			entity.link_id = hash(selected_item)
 			local inventory = entity.get_inventory(defines.inventory.chest)
@@ -70,16 +72,20 @@ exportBus:onGuiOpened(function(openedEvent, storage)
 	local inventory = entity.get_inventory(defines.inventory.chest)
 	if inventory == nil then return end
 
-	local player = game.players[openedEvent.player_index]
+	local playerGui = game.players[openedEvent.player_index].gui.center
 	-- player.opened = nil
 
-	local guiName = storage.guiElement.name
-	local protoElement = player.gui.center[guiName]
-	if protoElement == nil then
-		local frame = player.gui.center.add { type = "frame", name = guiName .. "frame", direction = "vertical" }
+	local guiElement = nil
+	for _, element in ipairs(playerGui.children) do
+		if element.name == entity.prototype.name then
+			guiElement = element
+		end
+	end
 
-		local button = storage.guiElement:addTo(frame)
+	if guiElement == nil then
+		local frame = playerGui.add { type = "frame", name = entity.prototype.name, direction = "vertical" }
 
+		local button = storage.filterButton:addTo(frame)
 		local currentFilter = inventory.get_filter(1);
 		if currentFilter ~= nil then button.elem_value = currentFilter end
 	end

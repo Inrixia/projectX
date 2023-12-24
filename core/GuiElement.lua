@@ -7,6 +7,10 @@ local guiElemChanged = require("events/guiElemChanged")
 local GuiElement = {}
 GuiElement.__index = GuiElement
 
+if script then
+	script.register_metatable("GuiElement", GuiElement)
+end
+
 --- @param name string
 --- @param elementParams LuaGuiElement.add_param
 function GuiElement.new(name, elementParams)
@@ -15,7 +19,6 @@ function GuiElement.new(name, elementParams)
 	self.elementParams = elementParams
 	self.elementParams.name = name
 	self.name = name
-
 	return self
 end
 

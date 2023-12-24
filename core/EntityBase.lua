@@ -5,8 +5,8 @@ local guiOpened = require("events/guiOpened")
 
 --- @alias atData fun(prototypeName: string)
 --- @alias onLoad fun(storage: table, unit_number: integer)
---- @alias onEntityBuilt fun(event: onBuiltEvent, storage: table)
---- @alias onEntityGuiOpened fun(event: EventData.on_gui_opened, storage: table)
+--- @alias onEntityBuilt fun(event: onBuiltEvent, storage: table, unit_number: integer)
+--- @alias onEntityGuiOpened fun(event: EventData.on_gui_opened, storage: table, unit_number: integer)
 
 --- @class EntityBase
 --- @field public prototypeName string
@@ -31,12 +31,16 @@ end
 function EntityBase:AtData() self._atData(self.prototypeName) end
 
 function EntityBase:AtControl()
+	local function internalLoad(storage, unit_number)
+		if self._onLoad ~= nil then self._onLoad(storage, unit_number) end
+		if self._onGuiOpened ~= nil then
+			guiOpened:add(unit_number, function(event) self._onGuiOpened(event, storage, unit_number) end)
+		end
+	end
+
 	load(function()
-		for storage, unit_number in pairs(global.entityBases[self.prototypeName]) do
-			if self._onLoad ~= nil then self._onLoad(storage, unit_number) end
-			if self._onGuiOpened ~= nil then
-				guiOpened:add(unit_number, function(event) self._onGuiOpened(event, storage) end)
-			end
+		for unit_number, storage in pairs(global.entities[self.prototypeName]) do
+			internalLoad(storage, unit_number)
 		end
 	end)
 
@@ -45,10 +49,12 @@ function EntityBase:AtControl()
 			if global.entities == nil then global.entities = {} end
 			if global.entities[self.prototypeName] == nil then global.entities[self.prototypeName] = {} end
 
-			global.entities[self.prototypeName][event.created_entity.unit_number] = {}
-			local storage = global.entities[self.prototypeName][event.created_entity.unit_number]
-			self._onBuilt(event, storage)
-			if self._onLoad ~= nil then self._onLoad(storage, event.created_entity.unit_number) end
+			local unit_number = event.created_entity.unit_number
+
+			global.entities[self.prototypeName][unit_number] = {}
+			local storage = global.entities[self.prototypeName][unit_number]
+			self._onBuilt(event, storage, unit_number)
+			internalLoad(storage, unit_number)
 		end)
 	end
 end
