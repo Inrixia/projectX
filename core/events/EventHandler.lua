@@ -24,30 +24,24 @@ function EventHandler.new(eventType, register, makeFilter)
 
 	self.eventType = eventType
 	self.makeFilter = makeFilter
+	self.register = register
 
-	if EventHandler.sharedStates[eventType] == nil then
-		EventHandler.sharedStates[eventType] = {
-			methods = {},
-			filters = {},
-			filtersKeyIndex = {},
-		}
-	end
-
-	-- Point to the shared state
-	self.methods = EventHandler.sharedStates[eventType].methods
-	self.filters = EventHandler.sharedStates[eventType].filters
-	self.filtersKeyIndex = EventHandler.sharedStates[eventType].filtersKeyIndex
+	self.methods = {}
+	self.filters = {}
+	self.filtersKeyIndex = {}
 
 	return self
 end
 
 function EventHandler:add(key, method)
+	local firstMethod = next(self.methods) == nil
 	self.methods[key] = method
 
 	if self.makeFilter ~= nil then
 		self.filters[key] = self.makeFilter(key)
 		self.filtersKeyIndex[key] = #self.filters
-	elseif next(self.methods) ~= nil then
+		self.register(self.methods, self.filters)
+	elseif firstMethod then
 		self.register(self.methods)
 	end
 end
@@ -55,14 +49,13 @@ end
 function EventHandler:remove(key)
 	self.methods[key] = nil
 
-	if next(self.methods) ~= nil then
-		script.on_event(self.eventType, nil)
+	if next(self.methods) == nil then
 		self.filters = {}
 		self.filtersKeyIndex = {}
+		script.on_event(self.eventType, nil)
 	elseif self.makeFilter ~= nil then
 		table.remove(self.filters, self.filtersKeyIndex[key])
 		self.filtersKeyIndex[key] = nil
-
 		self.register(self.methods, self.filters)
 	end
 end

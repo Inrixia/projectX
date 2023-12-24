@@ -1,1 +1,1 @@
-require("core/ExportBus"):CreateProto()
+require("core/ExportBus"):AtData()

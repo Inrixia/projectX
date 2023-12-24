@@ -1,1 +1,1 @@
-require("core/ExportBus"):RegisterEvents()
+require("core/ExportBus"):AtControl()

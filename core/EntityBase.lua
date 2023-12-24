@@ -1,61 +1,65 @@
-local init = require("events/init")
 local load = require("events/load")
 
 local built = require("events/built")
 local guiOpened = require("events/guiOpened")
 
+--- @alias atData fun(prototypeName: string)
+--- @alias onLoad fun(storage: table, unit_number: integer)
+--- @alias onEntityBuilt fun(event: onBuiltEvent, storage: table)
+--- @alias onEntityGuiOpened fun(event: EventData.on_gui_opened, storage: table)
+
 --- @class EntityBase
 --- @field public prototypeName string
---- @field private _onData fun()
---- @field private _onBuilt onBuilt
---- @field private _onGuiOpened onGuiOpened
+--- @field private _atData atData
+--- @field private _onBuilt onEntityBuilt
+--- @field private _onLoad onLoad
+--- @field private _onGuiOpened onEntityGuiOpened
 local EntityBase = {}
 EntityBase.__index = EntityBase
 
 --- @param prototypeName string
-function EntityBase.new(prototypeName)
+--- @param atData atData
+function EntityBase.new(prototypeName, atData)
 	local self = setmetatable({}, EntityBase)
 
 	self.prototypeName = prototypeName
+	self._atData = atData
 
 	return self
 end
 
-function EntityBase:RegisterEvents()
-	init(function()
-		if global.entityBases == nil then global.entityBases = {} end
-		if global.entityBases[self.prototypeName] == nil then global.entityBases[self.prototypeName] = {} end
-	end)
+function EntityBase:AtData() self._atData(self.prototypeName) end
 
-	--- @param unit_number integer
-	local function registerEvents(unit_number)
-		if self._onGuiOpened ~= nil then guiOpened:add(unit_number, self._onGuiOpened) end
-	end
-
+function EntityBase:AtControl()
 	load(function()
-		for unit_number, _ in pairs(global.entityBases[self.prototypeName]) do
-			registerEvents(unit_number)
+		for storage, unit_number in pairs(global.entityBases[self.prototypeName]) do
+			if self._onLoad ~= nil then self._onLoad(storage, unit_number) end
+			if self._onGuiOpened ~= nil then
+				guiOpened:add(unit_number, function(event) self._onGuiOpened(event, storage) end)
+			end
 		end
 	end)
 
-	built.add(self.prototypeName, function(event)
-		local unit_number = event.created_entity.unit_number;
-		global.entityBases[self.prototypeName][unit_number] = true
-		registerEvents(unit_number)
+	if self._onBuilt ~= nil then
+		built.add(self.prototypeName, function(event)
+			if global.entities == nil then global.entities = {} end
+			if global.entities[self.prototypeName] == nil then global.entities[self.prototypeName] = {} end
 
-		if (self._onBuilt ~= nil) then self._onBuilt(event) end
-	end)
+			global.entities[self.prototypeName][event.created_entity.unit_number] = {}
+			local storage = global.entities[self.prototypeName][event.created_entity.unit_number]
+			self._onBuilt(event, storage)
+			if self._onLoad ~= nil then self._onLoad(storage, event.created_entity.unit_number) end
+		end)
+	end
 end
 
-function EntityBase:CreateProto() self._onData() end
-
---- @param method onBuilt onBuilt
+--- @param method onEntityBuilt
 function EntityBase:onBuilt(method) self._onBuilt = method end
 
---- @param method onGuiClosed onGuiOpened
-function EntityBase:onGuiOpened(method) self._onGuiOpened = method end
+--- @param method onLoad
+function EntityBase:onLoad(method) self._onLoad = method end
 
---- @param method fun()
-function EntityBase:onData(method) self._onData = method end
+--- @param method onEntityGuiOpened
+function EntityBase:onGuiOpened(method) self._onGuiOpened = method end
 
 return EntityBase

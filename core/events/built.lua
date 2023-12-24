@@ -1,7 +1,8 @@
 local builtEntity = require("builtEntity")
 local robotBuiltEntity = require("robotBuiltEntity")
 
---- @alias onBuilt fun(event:EventData.on_built_entity|EventData.on_robot_built_entity)
+--- @alias onBuiltEvent EventData.on_built_entity|EventData.on_robot_built_entity
+--- @alias onBuilt fun(event: onBuiltEvent)
 
 --- @param prototypeName string
 --- @param method onBuilt
