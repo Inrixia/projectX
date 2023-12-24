@@ -42,10 +42,10 @@ end)
 interface:onBuilt(function(event, storage, unit_number)
 	storage.entity = event.created_entity
 	storage.entity.get_inventory(defines.inventory.chest).set_bar(1)
-	storage.filterButton = GuiElement.new("filterButton" .. unit_number, {
-		type = "choose-elem-button",
-		elem_type = "item"
-	})
+	storage.filterButton = GuiElement.new(
+		"filterButton" .. unit_number,
+		{ type = "choose-elem-button", elem_type = "item" }
+	)
 end)
 
 --- @param storage InterfaceStorage
@@ -53,13 +53,18 @@ interface:onLoad(function(storage)
 	storage.filterButton:onChanged(function(changedEvent)
 		local selected_item = changedEvent.element.elem_value
 		local entity = storage.entity
-		if type(selected_item) == "string" then
+
+		local inventory = entity.get_inventory(defines.inventory.chest)
+		if inventory == nil then return end
+
+		if selected_item == nil then
+			entity.link_id = 0
+			inventory.set_filter(1, selected_item)
+			inventory.set_bar(1)
+		elseif type(selected_item) == "string" then
 			entity.link_id = hash(selected_item)
-			local inventory = entity.get_inventory(defines.inventory.chest)
-			if inventory ~= nil then
-				inventory.set_filter(1, selected_item)
-				inventory.set_bar()
-			end
+			inventory.set_filter(1, selected_item)
+			inventory.set_bar()
 		end
 	end)
 end)
@@ -71,44 +76,20 @@ interface:onGuiOpened(function(openedEvent, storage, unit_number)
 
 	local inventory = entity.get_inventory(defines.inventory.chest)
 	if inventory == nil then return end
+	local currentFilter = inventory.get_filter(1);
 
 	local player = game.players[openedEvent.player_index]
 	local playerGui = player.gui.screen
 
-	gui = game.player.gui.screen.add { type = "frame", name = "my-mod-gui", direction = "vertical" }
-	gui.auto_center = true
-	local titlebar = gui.add { type = "flow" }
-	titlebar.drag_target = gui
-	titlebar.add {
-		type = "label",
-		style = "frame_title",
-		caption = caption,
-		ignored_by_interaction = true,
-	}
-	local filler = titlebar.add {
-		type = "empty-widget",
-		style = "draggable_space",
-		ignored_by_interaction = true,
-	}
-	filler.style.height = 24
-	filler.style.horizontally_stretchable = true
-	titlebar.add {
-		type = "sprite-button",
-		name = close_button_name,
-		style = "frame_action_button",
-		sprite = "utility/close_white",
-		hovered_sprite = "utility/close_black",
-		clicked_sprite = "utility/close_black",
-		tooltip = { "gui.close-instruction" },
-	}
+	local interfaceGui = GuiElement.addOrReplace(playerGui,
+		{ type = "frame", name = entity.prototype.name, direction = "vertical" })
+	GuiElement.addTitlebar(interfaceGui, "Interface Gui")
 
+	local filterButton = storage.filterButton:addTo(interfaceGui)
+	if currentFilter ~= nil then filterButton.elem_value = currentFilter end
 
-	local guiInstance = storage.filterButton:open(playerGui)
-	local currentFilter = inventory.get_filter(1);
-	if currentFilter ~= nil then guiInstance:child("filterButton" .. unit_number).elem_value = currentFilter end
-
-	guiInstance.elem.force_auto_center()
-	player.opened = guiInstance.elem
+	interfaceGui.force_auto_center()
+	-- player.opened = interfaceGui.elem
 end)
 
 return interface
