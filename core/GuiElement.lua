@@ -3,8 +3,8 @@ local guiElemChanged = require("events/guiElemChanged")
 --- @class GuiElement
 --- @field public name string
 --- @field public children table<string, GuiElement>
---- @field private elementParams LuaGuiElement.add_param
---- @field private _onChanged onGuiElemChanged
+--- @field public elem LuaGuiElement.add_param
+--- @field protected _onChanged onGuiElemChanged
 local GuiElement = {}
 GuiElement.__index = GuiElement
 
@@ -14,22 +14,29 @@ end
 
 --- @param name string
 --- @param elementParams LuaGuiElement.add_param
---- @param children? table<string, LuaGuiElement.add_param>
+--- @param children? GuiElement[]
 function GuiElement.new(name, elementParams, children)
 	local self = setmetatable({}, GuiElement)
 
-	self.elementParams = elementParams
-	self.elementParams.name = name
+	self.elem = elementParams
+	self.elem.name = name
 	self.name = name
 	self.children = {}
 
 	if children ~= nil then
-		for childName, child in pairs(children) do
-			self.children[childName] = GuiElement.new(self.name .. childName, child)
+		for _, child in ipairs(children) do
+			self.children[child.name] = child
 		end
 	end
 
 	return self
+end
+
+--- @param name string
+--- @param child LuaGuiElement.add_param
+function GuiElement:addChild(name, child)
+	child.name = name
+	self.children[name] = GuiElement.new(name, child)
 end
 
 --- @param method onGuiElemChanged
@@ -38,7 +45,7 @@ function GuiElement:onChanged(method) guiElemChanged:add(self.name, method) end
 --- @param guiElement LuaGuiElement
 --- @returns LuaGuiElement
 function GuiElement:addTo(guiElement)
-	local guiElement = guiElement.add(self.elementParams)
+	local guiElement = guiElement.add(self.elem)
 	for _, child in pairs(self.children) do
 		child:addTo(guiElement)
 	end
@@ -82,10 +89,11 @@ end
 
 --- @param parentElement LuaGuiElement
 --- @returns GuiElementInstance
-function GuiElement:tryAddTo(parentElement)
+function GuiElement:open(parentElement)
 	for _, element in ipairs(parentElement.children) do
 		if element.name == self.name then
-			return GuiElementInstance.new(self, element)
+			element.destroy()
+			break
 		end
 	end
 	return GuiElementInstance.new(self, self:addTo(parentElement))
