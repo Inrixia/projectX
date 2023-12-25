@@ -1,4 +1,3 @@
-local indexHash = require("indexHash")
 local EventHandler = require("EventHandler")
 
 

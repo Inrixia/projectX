@@ -1,1 +1,1 @@
-require("core/Interface"):AtControl()
+require("core/Interface")

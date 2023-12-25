@@ -1,1 +1,1 @@
-require("core/Interface"):AtData()
+require("core/Interface_proto")
