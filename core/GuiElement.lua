@@ -12,7 +12,7 @@ GuiElement.__index = GuiElement
 script.register_metatable("GuiElement", GuiElement)
 
 --- @param name string
---- @param onCreate function|table The onCreate callback or a table with properties.
+--- @param onCreate onCreate|table onCreate callback or a table with properties.
 function GuiElement.new(name, onCreate)
 	local self = setmetatable({}, GuiElement)
 
@@ -41,6 +41,7 @@ function GuiElement:withTitlebar(caption)
 	self._onCreate = function(parentElement)
 		return GuiElement.addTitlebar(oldOnCreate(parentElement), caption)
 	end
+	ensureCloseButtonEvent()
 	return self
 end
 
@@ -66,10 +67,8 @@ end
 
 --- @param parentElement LuaGuiElement
 --- @returns LuaGuiElement
-function GuiElement:openOn(parentElement)
-	local thisElement = GuiElement.getChild(parentElement, self.name) or self:addTo(parentElement)
-	thisElement.visible = true
-	return thisElement
+function GuiElement:ensureOn(parentElement)
+	return GuiElement.getChild(parentElement, self.name) or self:addTo(parentElement)
 end
 
 --- @param guiElement LuaGuiElement
@@ -100,10 +99,14 @@ function GuiElement.addTitlebar(guiElement, caption)
 		clicked_sprite = "utility/close_black",
 		tooltip = { "gui.close-instruction" },
 	}
+	ensureCloseButtonEvent()
+	return guiElement
+end
+
+function ensureCloseButtonEvent()
 	guiClicked:add("__close-button__", function(event)
 		event.element.parent.parent.visible = false
 	end)
-	return guiElement
 end
 
 --- @param parentElement LuaGuiElement
@@ -118,6 +121,7 @@ end
 --- @param name string
 --- @returns GuiElementInstance
 function GuiElement.getChild(parentElement, name)
+	if name == nil then return nil end
 	for _, element in ipairs(parentElement.children) do
 		if (element.name == name) then
 			return element
@@ -137,11 +141,7 @@ end
 --- @param addParams LuaGuiElement.add_param
 --- @returns LuaGuiElement
 function GuiElement.ensureElement(parentElement, addParams)
-	if (addParams.name ~= nil) then
-		local childElement = GuiElement.getChild(parentElement, addParams.name)
-		if childElement then return childElement end
-	end
-	return parentElement.add(addParams)
+	return GuiElement.getChild(parentElement, addParams.name) or parentElement.add(addParams)
 end
 
 return GuiElement

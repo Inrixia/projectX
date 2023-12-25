@@ -52,12 +52,20 @@ interface:onGuiOpened(function(openedEvent)
 	local player = game.players[openedEvent.player_index]
 	local playerGui = player.gui.screen
 
-	local luaInterfaceGui = interfaceGui:openOn(playerGui)
+	local luaInterfaceGui = interfaceGui:ensureOn(playerGui)
 
 	local filterButton = GuiElement.getChild(luaInterfaceGui, filterButton.name)
+
 	filterButton.tags = { unit_number = entity.unit_number }
 	--- @diagnostic disable-next-line: assign-type-mismatch
 	filterButton.elem_value = currentFilter
+
+	luaInterfaceGui.location = {
+		x = (entity.position.x - player.position.x),
+		y = (entity.position.y - player.position.y)
+	}
+
+	luaInterfaceGui.visible = true
 
 	player.opened = luaInterfaceGui
 end)
