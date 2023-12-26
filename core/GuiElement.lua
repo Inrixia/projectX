@@ -1,4 +1,5 @@
 local guiElemChanged = require("events/guiElemChanged")
+local guiClosed = require("events/guiClosed")
 local guiClicked = require("events/guiClicked")
 
 --- @alias onCreate fun(parentElement: LuaGuiElement): LuaGuiElement
@@ -32,7 +33,25 @@ function GuiElement.new(name, onCreate)
 end
 
 --- @param method onGuiElemChanged
-function GuiElement:onChanged(method) guiElemChanged:add(self.name, method) end
+--- @returns GuiElement
+function GuiElement:onChanged(method)
+	guiElemChanged:add(self.name, method)
+	return self
+end
+
+--- @param method onGuiClosed
+--- @returns GuiElement
+function GuiElement:onClosed(method)
+	guiClosed:add(self.name, method)
+	return self
+end
+
+--- @param method onGuiClicked
+--- @returns GuiElement
+function GuiElement:onClick(method)
+	guiClicked:add(self.name, method)
+	return self
+end
 
 --- @param caption string
 --- @returns GuiElement
@@ -41,7 +60,6 @@ function GuiElement:withTitlebar(caption)
 	self._onCreate = function(parentElement)
 		return GuiElement.addTitlebar(oldOnCreate(parentElement), caption)
 	end
-	ensureCloseButtonEvent()
 	return self
 end
 
@@ -71,6 +89,17 @@ function GuiElement:ensureOn(parentElement)
 	return GuiElement.getChild(parentElement, self.name) or self:addTo(parentElement)
 end
 
+local closeButton = GuiElement.new("__close-button__", {
+	type = "sprite-button",
+	name = "__close-button__",
+	style = "frame_action_button",
+	sprite = "utility/close_white",
+	hovered_sprite = "utility/close_black",
+	clicked_sprite = "utility/close_black",
+}):onClick(function(event)
+	event.element.parent.parent.visible = false
+end)
+
 --- @param guiElement LuaGuiElement
 --- @param caption string
 --- @returns LuaGuiElement
@@ -90,23 +119,8 @@ function GuiElement.addTitlebar(guiElement, caption)
 	}
 	filler.style.height = 24
 	filler.style.horizontally_stretchable = true
-	titlebar.add {
-		type = "sprite-button",
-		name = "__close-button__",
-		style = "frame_action_button",
-		sprite = "utility/close_white",
-		hovered_sprite = "utility/close_black",
-		clicked_sprite = "utility/close_black",
-		tooltip = { "gui.close-instruction" },
-	}
-	ensureCloseButtonEvent()
+	closeButton:addTo(titlebar)
 	return guiElement
-end
-
-function ensureCloseButtonEvent()
-	guiClicked:add("__close-button__", function(event)
-		event.element.parent.parent.visible = false
-	end)
 end
 
 --- @param parentElement LuaGuiElement

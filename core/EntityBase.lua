@@ -46,6 +46,7 @@ function EntityBase:_setup(storage, unit_number)
 end
 
 --- @param onBuiltMethod onEntityBuilt
+--- @returns EntityBase
 function EntityBase:onBuilt(onBuiltMethod)
 	built.add(self.prototypeName, function(event)
 		if global.entities == nil then global.entities = {} end
@@ -58,12 +59,21 @@ function EntityBase:onBuilt(onBuiltMethod)
 		onBuiltMethod(event, storage, unit_number)
 		self:_setup(storage, unit_number)
 	end)
+	return self
 end
 
 --- @param method onLoad
-function EntityBase:onLoad(method) self._onLoad = method end
+--- @returns EntityBase
+function EntityBase:onLoad(method)
+	self._onLoad = method
+	return self
+end
 
 --- @param method onEntityGuiOpened
-function EntityBase:onGuiOpened(method) self._onGuiOpened = method end
+--- @returns EntityBase
+function EntityBase:onGuiOpened(method)
+	self._onGuiOpened = method
+	return self
+end
 
 return EntityBase
