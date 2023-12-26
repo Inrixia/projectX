@@ -1,4 +1,3 @@
-local EventHandler = require("EventHandler")
 local loadHandlers = nil
 
 --- @param method fun()

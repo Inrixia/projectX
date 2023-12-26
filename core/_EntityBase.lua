@@ -1,15 +1,15 @@
 local load = require("events/load")
 
-local built = require("events/built")
+local entityCreated = require("events/entityCreated")
 local guiOpened = require("events/guiOpened")
 
 --- @alias onLoad fun(storage: table, unit_number: integer)
---- @alias onEntityBuilt fun(event: onBuiltEvent, storage: table, unit_number: integer)
+--- @alias onEntityBuilt fun(event: onEntityCreatedEvent, storage: table, unit_number: integer)
 --- @alias onEntityGuiOpened fun(event: EventData.on_gui_opened, storage: table, unit_number: integer)
 
 --- @class EntityBase
 --- @field public prototypeName string
---- @field private _onBuilt onEntityBuilt
+--- @field private _onBuilt onEntityCreated
 --- @field private _onLoad onLoad
 --- @field private _onGuiOpened onEntityGuiOpened
 local EntityBase = {}
@@ -48,7 +48,7 @@ end
 --- @param onBuiltMethod onEntityBuilt
 --- @returns EntityBase
 function EntityBase:onBuilt(onBuiltMethod)
-	built.add(self.prototypeName, function(event)
+	entityCreated.add(self.prototypeName, function(event)
 		if global.entities == nil then global.entities = {} end
 		if global.entities[self.prototypeName] == nil then global.entities[self.prototypeName] = {} end
 

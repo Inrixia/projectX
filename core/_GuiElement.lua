@@ -97,7 +97,7 @@ local closeButton = GuiElement.new("__close-button__", {
 	hovered_sprite = "utility/close_black",
 	clicked_sprite = "utility/close_black",
 }):onClick(function(event)
-	event.element.parent.parent.visible = false
+	game.players[event.player_index].opened = nil
 end)
 
 --- @param guiElement LuaGuiElement

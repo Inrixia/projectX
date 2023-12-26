@@ -55,23 +55,24 @@ interface:onGuiOpened(function(openedEvent)
 
 	local inventory = entity.get_inventory(defines.inventory.chest)
 	if inventory == nil then return end
-	local currentFilter = inventory.get_filter(1);
 
 	local player = game.players[openedEvent.player_index]
 	local playerGui = player.gui.screen
 
 	local luaInterfaceGui = interfaceGui:ensureOn(playerGui)
-
 	local filterButton = GuiElement.getChild(luaInterfaceGui, filterButton.name)
 
-	filterButton.tags = { unit_number = entity.unit_number }
-	--- @diagnostic disable-next-line: assign-type-mismatch
-	filterButton.elem_value = currentFilter
-
-	if luaInterfaceGui.visible == false then
-		luaInterfaceGui.force_auto_center()
-		luaInterfaceGui.visible = true
+	-- If invalid gui then reset element
+	if filterButton == nil then
+		luaInterfaceGui.destroy()
+		player.opened = nil
+		return
 	end
 
+	--- @diagnostic disable-next-line: assign-type-mismatch
+	filterButton.elem_value = inventory.get_filter(1)
+	filterButton.tags = { unit_number = entity.unit_number }
+
+	luaInterfaceGui.visible = true
 	player.opened = luaInterfaceGui
 end)
