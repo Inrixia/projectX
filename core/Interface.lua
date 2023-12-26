@@ -45,6 +45,9 @@ local interfaceGui = GuiElement
 	end)
 	:withTitlebar("Interface Gui")
 	:addChild(filterButton)
+	:onClosed(function(event)
+		event.element.visible = false
+	end)
 
 interface:onGuiOpened(function(openedEvent)
 	local entity = openedEvent.entity
@@ -65,7 +68,10 @@ interface:onGuiOpened(function(openedEvent)
 	--- @diagnostic disable-next-line: assign-type-mismatch
 	filterButton.elem_value = currentFilter
 
-	if luaInterfaceGui.visible == false then luaInterfaceGui.force_auto_center() end
-	luaInterfaceGui.visible = true
-	player.opened = nil
+	if luaInterfaceGui.visible == false then
+		luaInterfaceGui.force_auto_center()
+		luaInterfaceGui.visible = true
+	end
+
+	player.opened = luaInterfaceGui
 end)
