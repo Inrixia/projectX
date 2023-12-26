@@ -94,8 +94,9 @@ function EntityBase:onGuiOpened(method)
 end
 
 --- @param entity LuaEntity
---- @returns table<LuaEntity>
+--- @returns LuaEntity[]
 function EntityBase:findAdjacent(entity)
+	--- @type LuaEntity[]
 	local adjacent = {}
 	local adjacentEntity = nil
 	adjacentEntity = entity.surface.find_entity(self.prototypeName, { entity.position.x, entity.position.y - 1 }) -- Above

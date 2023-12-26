@@ -14,7 +14,6 @@
 --- @field private filtersKeyIndex table<any, number>
 local EventHandler = {}
 EventHandler.__index = EventHandler
-EventHandler.sharedStates = {}
 
 --- @param eventType EventType
 --- @param register Register

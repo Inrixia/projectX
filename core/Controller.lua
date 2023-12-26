@@ -1,14 +1,47 @@
 local EntityBase = require("_EntityBase")
 
---- @class ControllerInstance
+--- @class Network
 --- @field controllers integer
+--- @field id integer
+Network = {}
+Network.__index = Network
 
---- @class SharedReference
---- @field ref ControllerInstance
+--- @type (Network|integer)[]
+local networkInstances = {}
+
+function Network.new()
+	local networkId = #networkInstances + 1
+
+	local self = setmetatable({ id = networkId }, Network)
+	networkInstances[networkId] = self
+
+	self.controllers = 0
+
+	return self
+end
+
+function Network.getNetwork(networkId)
+	local theNetwork = networkInstances[networkId]
+	if (type(theNetwork) == "number") then
+		--- @type Network
+		return Network.getNetwork(theNetwork)
+	end
+
+	--- @type Network
+	return theNetwork
+end
+
+-- Function to merge two networks
+function Network:merge(networkId)
+	local srcNetwork = Network.getNetwork(networkId)
+	if self.id == srcNetwork.id then return end
+	self.controllers = self.controllers + srcNetwork.controllers
+	-- Overwrite reference to save memory
+	networkInstances[networkId] = self.id
+end
 
 --- @class ControllerStorage
---- @field network SharedReference
---- @field adjacent table<ControllerStorage>
+--- @field networkId integer
 
 local controller = EntityBase.new(require("Controller_proto"))
 
@@ -18,36 +51,34 @@ controller:onCreated(function(event, storage)
 
 	local adjacentEntities = controller:findAdjacent(entity)
 	if #adjacentEntities == 0 then
-		storage.network = { ref = { controllers = 1 } }
-		storage.adjacent = {}
-	elseif #adjacentEntities == 1 then
+		storage.networkId = Network.new().id
+	else
 		--- @type ControllerStorage
 		local adjacentStorage = controller:getInstanceStorage(adjacentEntities[1].unit_number)
+		storage.networkId = adjacentStorage.networkId
 
-		storage.adjacent = { adjacentStorage }
-		table.insert(adjacentStorage.adjacent, storage)
-
-		storage.network = adjacentStorage.network
-		storage.network.ref.controllers = storage.network.ref.controllers + 1
-	else
-		storage.adjacent = {}
-		for i, adjacentEntity in ipairs(adjacentEntities) do
-			--- @type ControllerStorage
-			local adjacentStorage = controller:getInstanceStorage(adjacentEntity.unit_number)
-			table.insert(adjacentStorage.adjacent, storage)
-			if i == 1 then
-				storage.network = adjacentStorage.network
-			else
-				local thisNetwork = storage.network
-				local adjacentNetwork = adjacentStorage.network
-				if thisNetwork.ref ~= adjacentNetwork.ref then
-					thisNetwork.ref.controllers = thisNetwork.ref.controllers + adjacentNetwork.ref.controllers
-					adjacentNetwork.ref = thisNetwork.ref
+		local thisNetwork = Network.getNetwork(storage.networkId)
+		if #adjacentEntities ~= 1 then
+			for i, adjacentEntity in ipairs(adjacentEntities) do
+				if i ~= 1 then
+					adjacentStorage = controller:getInstanceStorage(adjacentEntity.unit_number)
+					local adjacentNetwork = Network.getNetwork(adjacentStorage.networkId)
+					if thisNetwork.id ~= adjacentNetwork.id then
+						thisNetwork:merge(adjacentNetwork.id)
+					end
 				end
 			end
-			table.insert(storage.adjacent, adjacentStorage)
 		end
-		storage.network.ref.controllers = storage.network.ref.controllers + 1
 	end
-	print(storage.network.ref.controllers)
+	local thisNetwork = Network.getNetwork(storage.networkId)
+	thisNetwork.controllers = thisNetwork.controllers + 1
+	print(thisNetwork.controllers, countTableItems(global.entities.projectX_controller))
 end)
+
+function countTableItems(tbl)
+	local count = 0
+	for _ in pairs(tbl) do
+		count = count + 1
+	end
+	return count
+end
