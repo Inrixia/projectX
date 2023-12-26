@@ -72,13 +72,4 @@ controller:onCreated(function(event, storage)
 	end
 	local thisNetwork = Network.getNetwork(storage.networkId)
 	thisNetwork.controllers = thisNetwork.controllers + 1
-	print(thisNetwork.controllers, countTableItems(global.entities.projectX_controller))
 end)
-
-function countTableItems(tbl)
-	local count = 0
-	for _ in pairs(tbl) do
-		count = count + 1
-	end
-	return count
-end

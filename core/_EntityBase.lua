@@ -11,10 +11,9 @@ local guiOpened = require("events/guiOpened")
 
 --- @class EntityBase
 --- @field public prototypeName string
---- @field private _onCreated EntityBase.onEntityCreated
---- @field private _onRemoved EntityBase.onEntityRemoved
---- @field private _onLoad EntityBase.onLoad
---- @field private _onGuiOpened EntityBase.onEntityGuiOpened
+--- @field _onCreated EntityBase.onEntityCreated
+--- @field _onRemoved EntityBase.onEntityRemoved
+--- @field _onLoad EntityBase.onLoad
 local EntityBase = {}
 EntityBase.__index = EntityBase
 
@@ -27,9 +26,29 @@ function EntityBase.new(prototype)
 	load(function()
 		if global.entities ~= nil and global.entities[self.prototypeName] ~= nil then
 			for unit_number, storage in pairs(global.entities[self.prototypeName]) do
-				self:_setup(storage, unit_number)
+				if self._onLoad ~= nil then self._onLoad(storage, unit_number) end
 			end
 		end
+	end)
+
+	entityRemoved.add(self.prototypeName, function(event)
+		local unit_number = event.entity.unit_number
+		if self._onRemoved then self._onRemoved(event, self:getInstanceStorage(unit_number), unit_number) end
+
+		global.entities[self.prototypeName][unit_number] = nil
+	end)
+	entityCreated.add(self.prototypeName, function(event)
+		if global.entities == nil then global.entities = {} end
+		if global.entities[self.prototypeName] == nil then global.entities[self.prototypeName] = {} end
+
+		local unit_number = event.created_entity.unit_number
+
+		global.entities[self.prototypeName][unit_number] = {}
+
+		local storage = self:getInstanceStorage(unit_number)
+
+		if self._onCreated ~= nil then self._onCreated(event, storage, unit_number) end
+		if self._onLoad ~= nil then self._onLoad(storage, unit_number) end
 	end)
 
 	return self
@@ -41,34 +60,10 @@ function EntityBase:getInstanceStorage(unit_number)
 	return global.entities[self.prototypeName][unit_number]
 end
 
-function EntityBase:_setup(storage, unit_number)
-	entityRemoved.add(unit_number, function(event)
-		if self._onRemoved then self._onRemoved(event, storage, unit_number) end
-
-		global.entities[self.prototypeName][unit_number] = nil
-		if self._onGuiOpened ~= nil then guiOpened:remove(unit_number) end
-	end)
-
-	if self._onLoad ~= nil then self._onLoad(storage, unit_number) end
-	if self._onGuiOpened ~= nil then
-		guiOpened:add(unit_number, function(event) self._onGuiOpened(event, storage, unit_number) end)
-	end
-end
-
 --- @param method EntityBase.onEntityCreated
 --- @returns EntityBase
 function EntityBase:onCreated(method)
-	entityCreated.add(self.prototypeName, function(event)
-		if global.entities == nil then global.entities = {} end
-		if global.entities[self.prototypeName] == nil then global.entities[self.prototypeName] = {} end
-
-		local unit_number = event.created_entity.unit_number
-
-		global.entities[self.prototypeName][unit_number] = {}
-		local storage = global.entities[self.prototypeName][unit_number]
-		method(event, storage, unit_number)
-		self:_setup(storage, unit_number)
-	end)
+	self._onCreated = method
 	return self
 end
 
@@ -89,7 +84,10 @@ end
 --- @param method EntityBase.onEntityGuiOpened
 --- @returns EntityBase
 function EntityBase:onGuiOpened(method)
-	self._onGuiOpened = method
+	guiOpened:add(self.prototypeName, function(event)
+		local unit_number = event.entity.unit_number
+		method(event, self:getInstanceStorage(unit_number), unit_number)
+	end)
 	return self
 end
 
