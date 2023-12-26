@@ -24,8 +24,10 @@ function EntityBase.new(prototype)
 	self.prototypeName = prototype.prototypeName
 
 	load(function()
-		for unit_number, storage in pairs(global.entities[self.prototypeName]) do
-			self:_setup(storage, unit_number)
+		if global.entities ~= nil and global.entities[self.prototypeName] ~= nil then
+			for unit_number, storage in pairs(global.entities[self.prototypeName]) do
+				self:_setup(storage, unit_number)
+			end
 		end
 	end)
 
@@ -60,6 +62,30 @@ function EntityBase:onBuilt(onBuiltMethod)
 		self:_setup(storage, unit_number)
 	end)
 	return self
+end
+
+--- @param entity LuaEntity
+--- @returns LuaEntity[]
+function EntityBase:findAdjacent(entity)
+	local adjacent = {}
+	local adjacentEntity = nil
+	adjacentEntity = entity.surface.find_entity(self.prototypeName, { entity.position.x, entity.position.y - 1 }) -- Above
+	if adjacentEntity then table.insert(adjacent, adjacentEntity) end
+	adjacentEntity = entity.surface.find_entity(self.prototypeName, { entity.position.x, entity.position.y + 1 }) -- Below
+	if adjacentEntity then table.insert(adjacent, adjacentEntity) end
+	adjacentEntity = entity.surface.find_entity(self.prototypeName, { entity.position.x - 1, entity.position.y }) -- Left
+	if adjacentEntity then table.insert(adjacent, adjacentEntity) end
+	adjacentEntity = entity.surface.find_entity(self.prototypeName, { entity.position.x + 1, entity.position.y }) -- Right
+	if adjacentEntity then table.insert(adjacent, adjacentEntity) end
+end
+
+--- @param entity LuaEntity
+--- @returns LuaEntity|nil
+function EntityBase:findFirstAdjacent(entity)
+	return entity.surface.find_entity(self.prototypeName, { entity.position.x, entity.position.y - 1 }) -- Above
+		or entity.surface.find_entity(self.prototypeName, { entity.position.x, entity.position.y + 1 }) -- Below
+		or entity.surface.find_entity(self.prototypeName, { entity.position.x - 1, entity.position.y }) -- Left
+		or entity.surface.find_entity(self.prototypeName, { entity.position.x + 1, entity.position.y }) -- Right
 end
 
 --- @param method onLoad
