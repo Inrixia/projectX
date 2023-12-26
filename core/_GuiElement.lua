@@ -10,8 +10,6 @@ local guiClicked = require("events/guiClicked")
 local GuiElement = {}
 GuiElement.__index = GuiElement
 
-script.register_metatable("GuiElement", GuiElement)
-
 --- @param name string
 --- @param onCreate onCreate|table onCreate callback or a table with properties.
 function GuiElement.new(name, onCreate)

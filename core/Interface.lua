@@ -9,7 +9,7 @@ local GuiElement = require("_GuiElement")
 local interface = EntityBase.new(require("Interface_proto"))
 
 --- @param storage InterfaceStorage
-interface:onBuilt(function(event, storage)
+interface:onCreated(function(event, storage)
 	storage.entity = event.created_entity
 	storage.entity.get_inventory(defines.inventory.chest).set_bar(1)
 end)

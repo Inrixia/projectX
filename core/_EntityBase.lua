@@ -1,21 +1,22 @@
 local load = require("events/load")
 
 local entityCreated = require("events/entityCreated")
+local entityRemoved = require("events/entityRemoved")
 local guiOpened = require("events/guiOpened")
 
---- @alias onLoad fun(storage: table, unit_number: integer)
---- @alias onEntityBuilt fun(event: onEntityCreatedEvent, storage: table, unit_number: integer)
---- @alias onEntityGuiOpened fun(event: EventData.on_gui_opened, storage: table, unit_number: integer)
+--- @alias EntityBase.onLoad fun(storage: table, unit_number: integer)
+--- @alias EntityBase.onEntityCreated fun(event: onEntityCreatedEvent, storage: table, unit_number: integer)
+--- @alias EntityBase.onEntityRemoved fun(event: onEntityRemovedEvent, storage: table, unit_number: integer)
+--- @alias EntityBase.onEntityGuiOpened fun(event: EventData.on_gui_opened, storage: table, unit_number: integer)
 
 --- @class EntityBase
 --- @field public prototypeName string
---- @field private _onBuilt onEntityCreated
---- @field private _onLoad onLoad
---- @field private _onGuiOpened onEntityGuiOpened
+--- @field private _onCreated EntityBase.onEntityCreated
+--- @field private _onRemoved EntityBase.onEntityRemoved
+--- @field private _onLoad EntityBase.onLoad
+--- @field private _onGuiOpened EntityBase.onEntityGuiOpened
 local EntityBase = {}
 EntityBase.__index = EntityBase
-
-script.register_metatable("EntityBase", EntityBase)
 
 --- @param prototype ProtoBase
 function EntityBase.new(prototype)
@@ -41,15 +42,22 @@ function EntityBase:getInstanceStorage(unit_number)
 end
 
 function EntityBase:_setup(storage, unit_number)
+	entityRemoved.add(unit_number, function(event)
+		if self._onRemoved then self._onRemoved(event, storage, unit_number) end
+
+		global.entities[self.prototypeName][unit_number] = nil
+		if self._onGuiOpened ~= nil then guiOpened:remove(unit_number) end
+	end)
+
 	if self._onLoad ~= nil then self._onLoad(storage, unit_number) end
 	if self._onGuiOpened ~= nil then
 		guiOpened:add(unit_number, function(event) self._onGuiOpened(event, storage, unit_number) end)
 	end
 end
 
---- @param onBuiltMethod onEntityBuilt
+--- @param method EntityBase.onEntityCreated
 --- @returns EntityBase
-function EntityBase:onBuilt(onBuiltMethod)
+function EntityBase:onCreated(method)
 	entityCreated.add(self.prototypeName, function(event)
 		if global.entities == nil then global.entities = {} end
 		if global.entities[self.prototypeName] == nil then global.entities[self.prototypeName] = {} end
@@ -58,14 +66,35 @@ function EntityBase:onBuilt(onBuiltMethod)
 
 		global.entities[self.prototypeName][unit_number] = {}
 		local storage = global.entities[self.prototypeName][unit_number]
-		onBuiltMethod(event, storage, unit_number)
+		method(event, storage, unit_number)
 		self:_setup(storage, unit_number)
 	end)
 	return self
 end
 
+--- @param method EntityBase.onEntityRemoved
+--- @returns EntityBase
+function EntityBase:onRemoved(method)
+	self._onRemoved = method
+	return self
+end
+
+--- @param method EntityBase.onLoad
+--- @returns EntityBase
+function EntityBase:onLoad(method)
+	self._onLoad = method
+	return self
+end
+
+--- @param method EntityBase.onEntityGuiOpened
+--- @returns EntityBase
+function EntityBase:onGuiOpened(method)
+	self._onGuiOpened = method
+	return self
+end
+
 --- @param entity LuaEntity
---- @returns LuaEntity[]
+--- @returns table<LuaEntity>
 function EntityBase:findAdjacent(entity)
 	local adjacent = {}
 	local adjacentEntity = nil
@@ -77,6 +106,7 @@ function EntityBase:findAdjacent(entity)
 	if adjacentEntity then table.insert(adjacent, adjacentEntity) end
 	adjacentEntity = entity.surface.find_entity(self.prototypeName, { entity.position.x + 1, entity.position.y }) -- Right
 	if adjacentEntity then table.insert(adjacent, adjacentEntity) end
+	return adjacent
 end
 
 --- @param entity LuaEntity
@@ -86,20 +116,6 @@ function EntityBase:findFirstAdjacent(entity)
 		or entity.surface.find_entity(self.prototypeName, { entity.position.x, entity.position.y + 1 }) -- Below
 		or entity.surface.find_entity(self.prototypeName, { entity.position.x - 1, entity.position.y }) -- Left
 		or entity.surface.find_entity(self.prototypeName, { entity.position.x + 1, entity.position.y }) -- Right
-end
-
---- @param method onLoad
---- @returns EntityBase
-function EntityBase:onLoad(method)
-	self._onLoad = method
-	return self
-end
-
---- @param method onEntityGuiOpened
---- @returns EntityBase
-function EntityBase:onGuiOpened(method)
-	self._onGuiOpened = method
-	return self
 end
 
 return EntityBase
