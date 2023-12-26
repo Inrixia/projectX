@@ -1,7 +1,7 @@
 local hash = require("lib/hash")
 
-local EntityBase = require("EntityBase")
-local GuiElement = require("GuiElement")
+local EntityBase = require("_EntityBase")
+local GuiElement = require("_GuiElement")
 
 --- @class InterfaceStorage
 --- @field entity LuaEntity

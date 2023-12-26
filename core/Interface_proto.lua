@@ -1,4 +1,4 @@
-local ProtoBase = require("ProtoBase")
+local ProtoBase = require("core/_ProtoBase")
 
 return ProtoBase.new("projectX_interface", function(prototypeName)
 	local chest = table.deepcopy(data.raw["linked-container"]["linked-chest"])
@@ -8,7 +8,7 @@ return ProtoBase.new("projectX_interface", function(prototypeName)
 	chest.gui_mode = "none"
 
 	-- Item
-	local item = table.deepcopy(data.raw.item["transport-belt"])
+	local item = table.deepcopy(data.raw.item["wooden-chest"])
 	item.name = prototypeName
 	item.place_result = prototypeName
 
@@ -16,16 +16,8 @@ return ProtoBase.new("projectX_interface", function(prototypeName)
 	local recipe = {
 		type = "recipe",
 		name = prototypeName,
-		enabled = true,
-		hidden = false,
-		energy_required = 1,
-		ingredients = {
-			{ "iron-plate",         10 },
-			{ "electronic-circuit", 10 },
-			{ "inserter",           5 },
-			{ "transport-belt",     5 },
-		},
 		result = prototypeName,
+		ingredients = {}
 	}
 
 	data:extend { chest, item, recipe }
