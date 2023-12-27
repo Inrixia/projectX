@@ -4,17 +4,17 @@ local robotBuiltEntity = require("robotBuiltEntity")
 --- @alias onEntityCreatedEvent EventData.on_built_entity|EventData.on_robot_built_entity
 --- @alias onEntityCreated fun(event: onEntityCreatedEvent)
 
---- @param prototypeName string
+--- @param name string
 --- @param method onEntityCreated
-function add(prototypeName, method)
-	robotBuiltEntity:add(prototypeName, method)
-	builtEntity:add(prototypeName, method)
+function add(name, method)
+	robotBuiltEntity:add(name, method)
+	builtEntity:add(name, method)
 end
 
---- @param prototypeName string
-function remove(prototypeName)
-	robotBuiltEntity:remove(prototypeName)
-	builtEntity:remove(prototypeName)
+--- @param name string
+function remove(name)
+	robotBuiltEntity:remove(name)
+	builtEntity:remove(name)
 end
 
 return {
