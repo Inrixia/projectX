@@ -28,21 +28,59 @@ function Network:ensureRefs(entityName)
 	return self:ensureRefs(entityName)
 end
 
---- @type fun(self: Network, name: string, unit_number: integer, storage: NetworkStorage)
+--- @param name string
+--- @param unit_number integer
+--- @param storage NetworkStorage
 function Network:add(name, unit_number, storage)
 	self:ensureRefs(name)[unit_number] = storage
 	self.refsCount = self.refsCount + 1
 	storage.network = self
 end
 
---- @param entityName string
+--- @param name string
 --- @param unit_number integer
-function Network:remove(entityName, unit_number)
-	local refStorage = self:ensureRefs(entityName)
-	if (refStorage[unit_number] == nil) then return end
+--- @param storage NetworkStorage
+function Network:remove(name, unit_number, storage)
+	storage.network = nil
 
-	refStorage[unit_number] = nil
-	self.refsCount = self.refsCount - 1
+	local refStorage = self:ensureRefs(name)
+	if (refStorage[unit_number] ~= nil) then
+		refStorage[unit_number] = nil
+		self.refsCount = self.refsCount - 1
+	end
+end
+
+--- @param unit_number integer
+--- @param node NetworkStorage
+--- @param visited table<integer, NetworkStorage>
+function depthFirstSearch(unit_number, node, visited)
+	visited[unit_number] = node
+	for unit_number, neighbor in pairs(node.adjacent) do
+		if not visited[unit_number] then
+			depthFirstSearch(unit_number, neighbor, visited)
+		end
+	end
+end
+
+--- @param storage NetworkStorage
+function Network.split(storage)
+	--- @type table<integer, NetworkStorage>
+	local visited = {}
+	for unit_number, node in pairs(storage.adjacent) do
+		if not visited[unit_number] then
+			visited = {}
+			depthFirstSearch(unit_number, node, visited)
+			local newNetwork = Network.new()
+			for unit_number, storage in pairs(visited) do
+				for entityName, refLookupTable in pairs(storage.network.refs) do
+					if refLookupTable[unit_number] ~= nil then
+						storage.network:remove(entityName, unit_number, storage)
+						newNetwork:add(entityName, unit_number, storage)
+					end
+				end
+			end
+		end
+	end
 end
 
 --- @param networkA Network

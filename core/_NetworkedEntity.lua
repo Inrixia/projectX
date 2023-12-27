@@ -39,15 +39,18 @@ function NetworkedEntity.new(protoBase)
 	end)
 	self:onRemoved(function(event)
 		local unit_number = event.entity.unit_number
+		local name = event.entity.name
 		local netEntities = self.ensureGlobalNetworkEntities()
 		local netStorage = netEntities[unit_number]
 		if netStorage == nil then return end
+		local adjCount = 0
 		for _, adjacentStorage in pairs(netStorage.adjacent) do
+			adjCount = adjCount + 1
 			adjacentStorage.adjacent[unit_number] = nil
 		end
+		netStorage.network:remove(name, unit_number, netStorage)
+		if adjCount > 1 then Network.split(netStorage) end
 		netEntities[unit_number] = nil
-
-		--- Do stuff with netStorage.adjacent and netStorage.network to ensure its removed properly
 	end)
 
 	return self
