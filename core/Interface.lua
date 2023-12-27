@@ -6,10 +6,12 @@ local GuiElement = require("_GuiElement")
 --- @class InterfaceStorage
 --- @field entity LuaEntity
 
+--- @class Interface : EntityBase
+--- @field getInstanceStorage fun(self: Interface, unit_number: integer): InterfaceStorage
 local interface = EntityBase.new(require("Interface_proto"))
 
---- @param storage InterfaceStorage
-interface:onCreated(function(event, storage)
+interface:onCreated(function(event)
+	local storage = interface:getInstanceStorage(event.created_entity.unit_number)
 	storage.entity = event.created_entity
 	storage.entity.get_inventory(defines.inventory.chest).set_bar(1)
 end)

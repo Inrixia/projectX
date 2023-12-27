@@ -5,9 +5,9 @@ local entityRemoved = require("events/entityRemoved")
 local guiOpened = require("events/guiOpened")
 
 --- @alias EntityBase.onLoad fun(storage: table, unit_number: integer)
---- @alias EntityBase.onEntityCreated fun(event: onEntityCreatedEvent, storage: table, unit_number: integer)
---- @alias EntityBase.onEntityRemoved fun(event: onEntityRemovedEvent, storage: table, unit_number: integer)
---- @alias EntityBase.onEntityGuiOpened fun(event: EventData.on_gui_opened, storage: table, unit_number: integer)
+--- @alias EntityBase.onEntityCreated onEntityCreated
+--- @alias EntityBase.onEntityRemoved onEntityRemoved
+--- @alias EntityBase.onEntityGuiOpened onGuiOpened
 
 local nullFunc = function() end
 
@@ -90,12 +90,11 @@ end
 function EntityBase:ensureOnCreated()
 	self:ensureOnRemoved()
 	entityCreated.add(self.protoName, function(event)
-		local unit_number = event.created_entity.unit_number
-
-		local storage = self:getInstanceStorage(unit_number)
-
-		if self._onCreated ~= nil then self._onCreated(event, storage, unit_number) end
-		if self._onLoad ~= nil then self._onLoad(storage, unit_number) end
+		if self._onCreated ~= nil then self._onCreated(event) end
+		if self._onLoad ~= nil then
+			local unit_number = event.created_entity.unit_number
+			self._onLoad(self:getInstanceStorage(unit_number), unit_number)
+		end
 	end)
 	self.ensureOnCreated = nullFunc
 end
@@ -110,9 +109,8 @@ end
 
 function EntityBase:ensureOnRemoved()
 	entityRemoved.add(self.protoName, function(event)
-		local unit_number = event.entity.unit_number
-		if self._onRemoved then self._onRemoved(event, self:getInstanceStorage(unit_number), unit_number) end
-		self:clearInstanceStorage(unit_number)
+		if self._onRemoved then self._onRemoved(event) end
+		self:clearInstanceStorage(event.entity.unit_number)
 	end)
 	self.ensureOnRemoved = nullFunc
 end
@@ -146,10 +144,7 @@ function EntityBase:onGuiOpened(method)
 end
 
 function EntityBase:ensureOnGuiOpened()
-	guiOpened:add(self.protoName, function(event)
-		local unit_number = event.entity.unit_number
-		self._onGuiOpened(event, self:getInstanceStorage(unit_number), unit_number)
-	end)
+	guiOpened:add(self.protoName, self._onGuiOpened)
 	self.ensureOnGuiOpened = nullFunc
 end
 

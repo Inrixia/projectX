@@ -1,6 +1,7 @@
 local EntityBase = require("_EntityBase")
 
 --- @class NetworkedEntity : EntityBase
+--- @field getInstanceStorage fun(self: NetworkedEntity, unit_number: integer): StorageWithNetwork
 NetworkedEntity = {}
 NetworkedEntity.__index = NetworkedEntity
 setmetatable(NetworkedEntity, { __index = EntityBase })
@@ -10,29 +11,21 @@ function NetworkedEntity.new(protoBase)
 	local self = setmetatable(EntityBase.new(protoBase), NetworkedEntity)
 	--- @cast self NetworkedEntity
 
-	--- @param storage StorageWithNetwork
-	self:onCreated(function(event, storage, unit_number)
+	self:onCreated(function(event)
 		local entity = event.created_entity
-		local adjacentEntities = self:findAdjacent(entity)
 
-		storage.adjacent = {}
+		local unit_number = entity.unit_number
+		local storage = self:getInstanceStorage(unit_number)
+
+		local adjacentEntities = self:findAdjacent(entity)
 		if #adjacentEntities == 0 then
 			Network.new():add(self.protoName, storage, unit_number)
 		else
-			--- @type StorageWithNetwork
-			local adjacentStorage = self:getInstanceStorage(adjacentEntities[1].unit_number)
-
-			adjacentStorage.network:add(self.protoName, storage, unit_number)
-			table.insert(storage.adjacent, adjacentStorage)
-
+			self:getInstanceStorage(adjacentEntities[1].unit_number).network:add(self.protoName, storage, unit_number)
 			if #adjacentEntities ~= 1 then
 				for i, adjacentEntity in ipairs(adjacentEntities) do
 					if i ~= 1 then
-						--- @type StorageWithNetwork
-						adjacentStorage = self:getInstanceStorage(adjacentEntity.unit_number)
-						table.insert(storage.adjacent, adjacentStorage)
-
-						Network.merge(storage.network, adjacentStorage.network)
+						Network.merge(storage.network, self:getInstanceStorage(adjacentEntity.unit_number).network)
 					end
 				end
 			end
@@ -41,9 +34,16 @@ function NetworkedEntity.new(protoBase)
 		print(storage.network.refsCount)
 	end)
 
-	--- @param storage StorageWithNetwork
-	self:onRemoved(function(_, storage, unit_number)
-		storage.network:remove(self.protoName, unit_number)
+	self:onRemoved(function(event)
+		local entity = event.entity
+		local unit_number = entity.unit_number
+
+		local adjacentEntities = self:findAdjacent(entity)
+		if #adjacentEntities == 1 then
+			self:getInstanceStorage(unit_number).network:remove(self.protoName, unit_number)
+		else
+
+		end
 	end)
 
 	return self

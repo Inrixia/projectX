@@ -1,6 +1,5 @@
 --- @class StorageWithNetwork
 --- @field network Network
---- @field adjacent StorageWithNetwork[]
 
 --- @alias refLookupTable table<integer, StorageWithNetwork>
 
