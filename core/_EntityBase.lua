@@ -55,7 +55,6 @@ function EntityBase:ensureInstanceStorage()
 end
 
 --- @alias EntityBase.getInstanceStorage fun(self: EntityBase, unit_number: integer): table
-
 --- @type EntityBase.getInstanceStorage
 function EntityBase:getInstanceStorage(unit_number)
 	local instanceStorage = self:ensureInstanceStorage()
@@ -69,12 +68,13 @@ function EntityBase:getInstanceStorage(unit_number)
 	return self:getInstanceStorage(unit_number)
 end
 
---- @param unit_number integer
+--- @alias EntityBase.clearInstanceStorage fun(self: EntityBase, unit_number: integer)
+--- @type EntityBase.clearInstanceStorage
 function EntityBase:clearInstanceStorage(unit_number)
 	local instanceStorage = self:ensureInstanceStorage()
 
 	--- Self modifying code baby! Dont re-check what we dont need to
-	--- @param unit_number integer
+	--- @type EntityBase.clearInstanceStorage
 	self.clearInstanceStorage = function(_, unit_number) instanceStorage[unit_number] = nil end
 	self:clearInstanceStorage(unit_number)
 end
@@ -153,15 +153,14 @@ end
 function EntityBase:findAdjacent(entity)
 	--- @type LuaEntity[]
 	local adjacent = {}
-	local adjacentEntity = nil
-	adjacentEntity = entity.surface.find_entity(self.protoName, { entity.position.x, entity.position.y - 1 }) -- Above
-	if adjacentEntity then table.insert(adjacent, adjacentEntity) end
-	adjacentEntity = entity.surface.find_entity(self.protoName, { entity.position.x, entity.position.y + 1 }) -- Below
-	if adjacentEntity then table.insert(adjacent, adjacentEntity) end
-	adjacentEntity = entity.surface.find_entity(self.protoName, { entity.position.x - 1, entity.position.y }) -- Left
-	if adjacentEntity then table.insert(adjacent, adjacentEntity) end
-	adjacentEntity = entity.surface.find_entity(self.protoName, { entity.position.x + 1, entity.position.y }) -- Right
-	if adjacentEntity then table.insert(adjacent, adjacentEntity) end
+	local adjacentEntity = entity.surface.find_entity(self.protoName, { entity.position.x, entity.position.y - 1 }) -- Above
+	if adjacentEntity ~= nil then table.insert(adjacent, adjacentEntity) end
+	adjacentEntity = entity.surface.find_entity(self.protoName, { entity.position.x, entity.position.y + 1 })    -- Below
+	if adjacentEntity ~= nil then table.insert(adjacent, adjacentEntity) end
+	adjacentEntity = entity.surface.find_entity(self.protoName, { entity.position.x - 1, entity.position.y })    -- Left
+	if adjacentEntity ~= nil then table.insert(adjacent, adjacentEntity) end
+	adjacentEntity = entity.surface.find_entity(self.protoName, { entity.position.x + 1, entity.position.y })    -- Right
+	if adjacentEntity ~= nil then table.insert(adjacent, adjacentEntity) end
 	return adjacent
 end
 
