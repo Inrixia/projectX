@@ -2,6 +2,7 @@ local EntityBase = require("_EntityBase")
 local Network = require("_Network")
 
 --- @class NetworkStorage
+--- @field name string
 --- @field network Network|nil
 --- @field adjacent table<integer, NetworkStorage>
 
@@ -17,12 +18,12 @@ function NetworkedEntity.new(protoBase)
 
 	self:onCreated(function(event)
 		local entity = event.created_entity
-		local netStorage = NetworkedEntity.ensureNetStorage(entity.unit_number)
+		local netStorage = NetworkedEntity.ensureNetStorage(entity)
 		for _, adjacentEntity in pairs(self:findAdjacent(entity)) do
 			local adjacentStorage = self.getNetStorage(adjacentEntity.unit_number)
 			if adjacentStorage ~= nil then
 				if netStorage.network == nil then
-					adjacentStorage.network:add(entity.name, entity.unit_number, netStorage)
+					adjacentStorage.network:add(entity.unit_number, netStorage)
 				else
 					Network.merge(netStorage.network, adjacentStorage.network)
 				end
@@ -32,14 +33,13 @@ function NetworkedEntity.new(protoBase)
 		end
 
 		if netStorage.network == nil then
-			Network.new():add(entity.name, entity.unit_number, netStorage)
+			Network.new():add(entity.unit_number, netStorage)
 		end
 
 		print(netStorage.network.refsCount)
 	end)
 	self:onRemoved(function(event)
 		local unit_number = event.entity.unit_number
-		local name = event.entity.name
 		local netEntities = self.ensureGlobalNetworkEntities()
 		local netStorage = netEntities[unit_number]
 		if netStorage == nil then return end
@@ -48,7 +48,7 @@ function NetworkedEntity.new(protoBase)
 			adjCount = adjCount + 1
 			adjacentStorage.adjacent[unit_number] = nil
 		end
-		netStorage.network:remove(name, unit_number, netStorage)
+		netStorage.network:remove(unit_number, netStorage)
 		if adjCount > 1 then Network.split(netStorage) end
 		netEntities[unit_number] = nil
 	end)
@@ -71,10 +71,11 @@ function NetworkedEntity.ensureGlobalNetworkEntities()
 	return NetworkedEntity.ensureGlobalNetworkEntities()
 end
 
---- @param unit_number integer
-function NetworkedEntity.ensureNetStorage(unit_number)
+--- @param entity LuaEntity
+function NetworkedEntity.ensureNetStorage(entity)
 	local netEntities = NetworkedEntity.ensureGlobalNetworkEntities()
-	if netEntities[unit_number] == nil then netEntities[unit_number] = { adjacent = {} } end
+	local unit_number = entity.unit_number
+	if netEntities[unit_number] == nil then netEntities[unit_number] = { name = entity.name, adjacent = {} } end
 	return netEntities[unit_number]
 end
 
