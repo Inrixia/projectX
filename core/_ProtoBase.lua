@@ -1,5 +1,5 @@
 --- @class ProtoBase
---- @field public prototypeName string
+--- @field public protoName string
 local ProtoBase = {}
 ProtoBase.__index = ProtoBase
 
@@ -8,9 +8,9 @@ ProtoBase.__index = ProtoBase
 function ProtoBase.new(prototypeName, atData)
 	local self = setmetatable({}, ProtoBase)
 
-	self.prototypeName = prototypeName
+	self.protoName = prototypeName
 
-	if script == nil then atData(self.prototypeName) end
+	if script == nil then atData(self.protoName) end
 
 	return self
 end

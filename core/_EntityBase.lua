@@ -9,11 +9,18 @@ local guiOpened = require("events/guiOpened")
 --- @alias EntityBase.onEntityRemoved fun(event: onEntityRemovedEvent, storage: table, unit_number: integer)
 --- @alias EntityBase.onEntityGuiOpened fun(event: EventData.on_gui_opened, storage: table, unit_number: integer)
 
+local nullFunc = function() end
+
 --- @class EntityBase
---- @field public prototypeName string
---- @field _onCreated EntityBase.onEntityCreated
---- @field _onRemoved EntityBase.onEntityRemoved
---- @field _onLoad EntityBase.onLoad
+--- @field public protoName string
+--- @field private _onCreated EntityBase.onEntityCreated
+--- @field private _onRemoved EntityBase.onEntityRemoved
+--- @field private _onLoad EntityBase.onLoad
+--- @field private _onGuiOpened EntityBase.onEntityGuiOpened
+--- @field private ensureOnCreated fun(self: EntityBase)
+--- @field private ensureOnLoad fun(self: EntityBase)
+--- @field private ensureOnRemoved fun(self: EntityBase)
+--- @field private ensureOnGuiOpened fun(self: EntityBase)
 local EntityBase = {}
 EntityBase.__index = EntityBase
 
@@ -21,74 +28,129 @@ EntityBase.__index = EntityBase
 function EntityBase.new(prototype)
 	local self = setmetatable({}, EntityBase)
 
-	self.prototypeName = prototype.prototypeName
+	self.protoName = prototype.protoName
 
-	load(function()
-		if global.entities ~= nil and global.entities[self.prototypeName] ~= nil then
-			for unit_number, storage in pairs(global.entities[self.prototypeName]) do
-				if self._onLoad ~= nil then self._onLoad(storage, unit_number) end
-			end
+	return self
+end
+
+--- @generic T : function
+--- @type fun(originalMethod: T, newMethod: T): T
+function EntityBase.overloadMethod(originalMethod, newMethod)
+	if originalMethod == nil then
+		return newMethod
+	else
+		return function(...)
+			newMethod(...)
+			originalMethod(...)
 		end
-	end)
+	end
+end
 
-	entityRemoved.add(self.prototypeName, function(event)
-		local unit_number = event.entity.unit_number
-		if self._onRemoved then self._onRemoved(event, self:getInstanceStorage(unit_number), unit_number) end
+function EntityBase:ensureInstanceStorage()
+	if global.entities == nil then global.entities = {} end
+	if global.entities[self.protoName] == nil then global.entities[self.protoName] = {} end
 
-		global.entities[self.prototypeName][unit_number] = nil
-	end)
-	entityCreated.add(self.prototypeName, function(event)
-		if global.entities == nil then global.entities = {} end
-		if global.entities[self.prototypeName] == nil then global.entities[self.prototypeName] = {} end
+	--- @type table<integer, table>
+	return global.entities[self.protoName]
+end
 
+--- @alias EntityBase.getInstanceStorage fun(self: EntityBase, unit_number: integer): table
+
+--- @type EntityBase.getInstanceStorage
+function EntityBase:getInstanceStorage(unit_number)
+	local instanceStorage = self:ensureInstanceStorage()
+
+	--- Self modifying code baby! Dont re-check what we dont need to
+	--- @type EntityBase.getInstanceStorage
+	self.getInstanceStorage = function(_, unit_number)
+		if instanceStorage[unit_number] == nil then instanceStorage[unit_number] = {} end
+		return instanceStorage[unit_number]
+	end
+	return self:getInstanceStorage(unit_number)
+end
+
+--- @param unit_number integer
+function EntityBase:clearInstanceStorage(unit_number)
+	local instanceStorage = self:ensureInstanceStorage()
+
+	--- Self modifying code baby! Dont re-check what we dont need to
+	--- @param unit_number integer
+	self.clearInstanceStorage = function(_, unit_number) instanceStorage[unit_number] = nil end
+	self:clearInstanceStorage(unit_number)
+end
+
+--- @param method EntityBase.onEntityCreated
+--- @returns EntityBase
+function EntityBase:onCreated(method)
+	self._onCreated = EntityBase.overloadMethod(self._onCreated, method)
+	self:ensureOnCreated()
+	return self
+end
+
+function EntityBase:ensureOnCreated()
+	self:ensureOnRemoved()
+	entityCreated.add(self.protoName, function(event)
 		local unit_number = event.created_entity.unit_number
-
-		global.entities[self.prototypeName][unit_number] = {}
 
 		local storage = self:getInstanceStorage(unit_number)
 
 		if self._onCreated ~= nil then self._onCreated(event, storage, unit_number) end
 		if self._onLoad ~= nil then self._onLoad(storage, unit_number) end
 	end)
-
-	return self
-end
-
---- @param unit_number integer
---- @return table
-function EntityBase:getInstanceStorage(unit_number)
-	return global.entities[self.prototypeName][unit_number]
-end
-
---- @param method EntityBase.onEntityCreated
---- @returns EntityBase
-function EntityBase:onCreated(method)
-	self._onCreated = method
-	return self
+	self.ensureOnCreated = nullFunc
 end
 
 --- @param method EntityBase.onEntityRemoved
 --- @returns EntityBase
 function EntityBase:onRemoved(method)
-	self._onRemoved = method
+	self._onRemoved = EntityBase.overloadMethod(self._onRemoved, method)
+	self:ensureOnRemoved()
 	return self
+end
+
+function EntityBase:ensureOnRemoved()
+	entityRemoved.add(self.protoName, function(event)
+		local unit_number = event.entity.unit_number
+		if self._onRemoved then self._onRemoved(event, self:getInstanceStorage(unit_number), unit_number) end
+		self:clearInstanceStorage(unit_number)
+	end)
+	self.ensureOnRemoved = nullFunc
 end
 
 --- @param method EntityBase.onLoad
 --- @returns EntityBase
 function EntityBase:onLoad(method)
-	self._onLoad = method
+	self._onLoad = EntityBase.overloadMethod(self._onLoad, method)
+	self:ensureOnLoad()
 	return self
+end
+
+function EntityBase:ensureOnLoad()
+	self:ensureOnCreated()
+	load(function()
+		if global.entities ~= nil and global.entities[self.protoName] ~= nil then
+			for unit_number, storage in pairs(global.entities[self.protoName]) do
+				if self._onLoad ~= nil then self._onLoad(storage, unit_number) end
+			end
+		end
+	end)
+	self.ensureOnLoad = nullFunc
 end
 
 --- @param method EntityBase.onEntityGuiOpened
 --- @returns EntityBase
 function EntityBase:onGuiOpened(method)
-	guiOpened:add(self.prototypeName, function(event)
-		local unit_number = event.entity.unit_number
-		method(event, self:getInstanceStorage(unit_number), unit_number)
-	end)
+	self._onGuiOpened = EntityBase.overloadMethod(self._onGuiOpened, method)
+	self:ensureOnGuiOpened()
 	return self
+end
+
+function EntityBase:ensureOnGuiOpened()
+	guiOpened:add(self.protoName, function(event)
+		local unit_number = event.entity.unit_number
+		self._onGuiOpened(event, self:getInstanceStorage(unit_number), unit_number)
+	end)
+	self.ensureOnGuiOpened = nullFunc
 end
 
 --- @param entity LuaEntity
@@ -97,13 +159,13 @@ function EntityBase:findAdjacent(entity)
 	--- @type LuaEntity[]
 	local adjacent = {}
 	local adjacentEntity = nil
-	adjacentEntity = entity.surface.find_entity(self.prototypeName, { entity.position.x, entity.position.y - 1 }) -- Above
+	adjacentEntity = entity.surface.find_entity(self.protoName, { entity.position.x, entity.position.y - 1 }) -- Above
 	if adjacentEntity then table.insert(adjacent, adjacentEntity) end
-	adjacentEntity = entity.surface.find_entity(self.prototypeName, { entity.position.x, entity.position.y + 1 }) -- Below
+	adjacentEntity = entity.surface.find_entity(self.protoName, { entity.position.x, entity.position.y + 1 }) -- Below
 	if adjacentEntity then table.insert(adjacent, adjacentEntity) end
-	adjacentEntity = entity.surface.find_entity(self.prototypeName, { entity.position.x - 1, entity.position.y }) -- Left
+	adjacentEntity = entity.surface.find_entity(self.protoName, { entity.position.x - 1, entity.position.y }) -- Left
 	if adjacentEntity then table.insert(adjacent, adjacentEntity) end
-	adjacentEntity = entity.surface.find_entity(self.prototypeName, { entity.position.x + 1, entity.position.y }) -- Right
+	adjacentEntity = entity.surface.find_entity(self.protoName, { entity.position.x + 1, entity.position.y }) -- Right
 	if adjacentEntity then table.insert(adjacent, adjacentEntity) end
 	return adjacent
 end
@@ -111,10 +173,10 @@ end
 --- @param entity LuaEntity
 --- @returns LuaEntity|nil
 function EntityBase:findFirstAdjacent(entity)
-	return entity.surface.find_entity(self.prototypeName, { entity.position.x, entity.position.y - 1 }) -- Above
-		or entity.surface.find_entity(self.prototypeName, { entity.position.x, entity.position.y + 1 }) -- Below
-		or entity.surface.find_entity(self.prototypeName, { entity.position.x - 1, entity.position.y }) -- Left
-		or entity.surface.find_entity(self.prototypeName, { entity.position.x + 1, entity.position.y }) -- Right
+	return entity.surface.find_entity(self.protoName, { entity.position.x, entity.position.y - 1 }) -- Above
+		or entity.surface.find_entity(self.protoName, { entity.position.x, entity.position.y + 1 }) -- Below
+		or entity.surface.find_entity(self.protoName, { entity.position.x - 1, entity.position.y }) -- Left
+		or entity.surface.find_entity(self.protoName, { entity.position.x + 1, entity.position.y }) -- Right
 end
 
 return EntityBase
