@@ -46,34 +46,35 @@ function EntityBase.overloadMethod(originalMethod, newMethod)
 	end
 end
 
-function EntityBase:ensureInstanceStorage()
+function EntityBase:ensureGlobalEntities()
 	if global.entities == nil then global.entities = {} end
 	if global.entities[self.protoName] == nil then global.entities[self.protoName] = {} end
 
-	--- @type table<integer, table>
-	return global.entities[self.protoName]
+	self.ensureGlobalEntities = function()
+		--- @type table
+		return global.entities[self.protoName]
+	end
+	return self.ensureGlobalEntities()
 end
 
---- @alias EntityBase.getInstanceStorage fun(self: EntityBase, unit_number: integer): table
---- @type EntityBase.getInstanceStorage
-function EntityBase:getInstanceStorage(unit_number)
-	local instanceStorage = self:ensureInstanceStorage()
+--- @alias EntityBase.ensureInstanceStorage fun(self: EntityBase, unit_number: integer): table
+--- @type EntityBase.ensureInstanceStorage
+function EntityBase:ensureInstanceStorage(unit_number)
+	local instanceStorage = self:ensureGlobalEntities()
 
-	--- Self modifying code baby! Dont re-check what we dont need to
-	--- @type EntityBase.getInstanceStorage
-	self.getInstanceStorage = function(_, unit_number)
+	--- @type EntityBase.ensureInstanceStorage
+	self.ensureInstanceStorage = function(_, unit_number)
 		if instanceStorage[unit_number] == nil then instanceStorage[unit_number] = {} end
 		return instanceStorage[unit_number]
 	end
-	return self:getInstanceStorage(unit_number)
+	return self:ensureInstanceStorage(unit_number)
 end
 
 --- @alias EntityBase.clearInstanceStorage fun(self: EntityBase, unit_number: integer)
 --- @type EntityBase.clearInstanceStorage
 function EntityBase:clearInstanceStorage(unit_number)
-	local instanceStorage = self:ensureInstanceStorage()
+	local instanceStorage = self:ensureGlobalEntities()
 
-	--- Self modifying code baby! Dont re-check what we dont need to
 	--- @type EntityBase.clearInstanceStorage
 	self.clearInstanceStorage = function(_, unit_number) instanceStorage[unit_number] = nil end
 	self:clearInstanceStorage(unit_number)
@@ -93,7 +94,7 @@ function EntityBase:ensureOnCreated()
 		if self._onCreated ~= nil then self._onCreated(event) end
 		if self._onLoad ~= nil then
 			local unit_number = event.created_entity.unit_number
-			self._onLoad(self:getInstanceStorage(unit_number), unit_number)
+			self._onLoad(self:ensureInstanceStorage(unit_number), unit_number)
 		end
 	end)
 	self.ensureOnCreated = nullFunc
@@ -148,29 +149,65 @@ function EntityBase:ensureOnGuiOpened()
 	self.ensureOnGuiOpened = nullFunc
 end
 
+--- @alias makeSearchArea fun(x: number, y: number): BoundingBox
+
+--- @type makeSearchArea
+function verticalSearchArea(x, y) return { { x - 0.5, y - 1.5 }, { x + 0.5, y + 1.5 } } end
+
+--- @type makeSearchArea
+function horizontalSearchArea(x, y) return { { x - 1.5, y - 0.5 }, { x + 1.5, y + 0.5 } } end
+
 --- @param entity LuaEntity
 --- @returns LuaEntity[]
 function EntityBase:findAdjacent(entity)
+	local x = entity.position.x
+	local y = entity.position.y
+
+	local surface = entity.surface
+
 	--- @type LuaEntity[]
-	local adjacent = {}
-	local adjacentEntity = entity.surface.find_entity(self.protoName, { entity.position.x, entity.position.y - 1 }) -- Above
-	if adjacentEntity ~= nil then table.insert(adjacent, adjacentEntity) end
-	adjacentEntity = entity.surface.find_entity(self.protoName, { entity.position.x, entity.position.y + 1 })    -- Below
-	if adjacentEntity ~= nil then table.insert(adjacent, adjacentEntity) end
-	adjacentEntity = entity.surface.find_entity(self.protoName, { entity.position.x - 1, entity.position.y })    -- Left
-	if adjacentEntity ~= nil then table.insert(adjacent, adjacentEntity) end
-	adjacentEntity = entity.surface.find_entity(self.protoName, { entity.position.x + 1, entity.position.y })    -- Right
-	if adjacentEntity ~= nil then table.insert(adjacent, adjacentEntity) end
-	return adjacent
+	local adjacent_entities = {}
+
+	-- Search vertically (top and bottom)
+	for _, adjacent_entity in pairs(surface.find_entities_filtered({ area = verticalSearchArea(x, y) })) do
+		if adjacent_entity.unit_number ~= entity.unit_number then
+			table.insert(adjacent_entities, adjacent_entity)
+		end
+	end
+
+	-- Search horizontally (left and right)
+	for _, adjacent_entity in pairs(surface.find_entities_filtered({ area = horizontalSearchArea(x, y) })) do
+		if adjacent_entity.unit_number ~= entity.unit_number and not adjacent_entities[adjacent_entity.unit_number] then
+			table.insert(adjacent_entities, adjacent_entity)
+		end
+	end
+
+	return adjacent_entities
 end
 
 --- @param entity LuaEntity
 --- @returns LuaEntity|nil
 function EntityBase:findFirstAdjacent(entity)
-	return entity.surface.find_entity(self.protoName, { entity.position.x, entity.position.y - 1 }) -- Above
-		or entity.surface.find_entity(self.protoName, { entity.position.x, entity.position.y + 1 }) -- Below
-		or entity.surface.find_entity(self.protoName, { entity.position.x - 1, entity.position.y }) -- Left
-		or entity.surface.find_entity(self.protoName, { entity.position.x + 1, entity.position.y }) -- Right
+	local x = entity.position.x
+	local y = entity.position.y
+
+	local surface = entity.surface
+
+	-- Search vertically (top and bottom)
+	for _, adjacent_entity in pairs(surface.find_entities_filtered({ area = verticalSearchArea(x, y), limit = 1 })) do
+		if adjacent_entity.unit_number ~= entity.unit_number then
+			return adjacent_entity
+		end
+	end
+
+	-- Search horizontally (left and right)
+	for _, adjacent_entity in pairs(surface.find_entities_filtered({ area = horizontalSearchArea(x, y), limit = 1 })) do
+		if adjacent_entity.unit_number ~= entity.unit_number then
+			return adjacent_entity
+		end
+	end
+
+	return nil
 end
 
 return EntityBase
