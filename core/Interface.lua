@@ -1,18 +1,24 @@
 local hash = require("lib/hash")
 
-local EntityBase = require("_EntityBase")
+local NetworkedEntity = require("_NetworkedEntity")
 local GuiElement = require("_GuiElement")
 
---- @class InterfaceStorage
+--- @class Interface : NetworkedEntity
+local interface = NetworkedEntity.new(require("Interface_proto"))
+
+--- @class StorageValue
 --- @field entity LuaEntity
 
---- @class Interface : EntityBase
---- @field getInstanceStorage fun(self: Interface, unit_number: integer): InterfaceStorage
-local interface = EntityBase.new(require("Interface_proto"))
+--- @class InstanceStorage : GlobalStorage
+--- @field ensure fun(self: GlobalStorage, unit_number: integer, default: StorageValue): StorageValue
+--- @field get fun(self: GlobalStorage, unit_number: integer): StorageValue | nil
+--- @field set fun(self: GlobalStorage, unit_number: integer, value: StorageValue | nil)
+local interfaceStorage = require("storage/global").new(interface.protoName)
 
-interface:onCreated(function(event)
-	local storage = interface:getInstanceStorage(event.created_entity.unit_number)
-	storage.entity = event.created_entity
+interface:onEntityCreated(function(event)
+	local storage = interfaceStorage:ensure(event.created_entity.unit_number, {
+		entity = event.created_entity
+	})
 	storage.entity.get_inventory(defines.inventory.chest).set_bar(1)
 end)
 
@@ -23,7 +29,9 @@ local filterButton =
 		local unit_number = changedEvent.element.tags.unit_number
 		if type(unit_number) ~= "number" then return end
 
-		local entity = interface:getInstanceStorage(unit_number).entity
+		local storage = interfaceStorage:get(unit_number)
+		if storage == nil then return end
+		local entity = storage.entity
 
 		local inventory = entity.get_inventory(defines.inventory.chest)
 		if inventory == nil then return end

@@ -3,7 +3,13 @@ local robotBuiltEntity = require("robotBuiltEntity")
 local scriptBuiltEntity = require("scriptBuiltEntity")
 local scriptRevivedEntity = require("scriptRevivedEntity")
 
---- @alias onEntityCreatedEvent EventData.on_built_entity|EventData.on_robot_built_entity|EventData.script_raised_built|EventData.script_raised_revive
+--- @class normalized_script_raised_revive : EventData.script_raised_revive
+--- @field entity nil
+
+--- @class normalized_script_raised_built: EventData.script_raised_built
+--- @field entity nil
+
+--- @alias onEntityCreatedEvent EventData.on_built_entity|EventData.on_robot_built_entity|normalized_script_raised_revive|normalized_script_raised_built
 --- @alias onEntityCreated fun(event: onEntityCreatedEvent)
 
 --- @param name string
