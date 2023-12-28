@@ -32,6 +32,7 @@ function NetworkedEntity.new(protoBase)
 		if netStorage.network == nil then
 			Network.new():add(entity.unit_number, netStorage)
 		end
+		print(netStorage.network.refsCount)
 	end)
 	self:onEntityRemoved(function(event)
 		local unit_number = event.entity.unit_number
@@ -42,7 +43,9 @@ function NetworkedEntity.new(protoBase)
 			adjCount = adjCount + 1
 			adjacentStorage.adjacent[unit_number] = nil
 		end
+		local tempNet = netStorage.network
 		netStorage.network:remove(unit_number, netStorage)
+		print(tempNet.refsCount)
 		if adjCount > 1 then Network.split(netStorage) end
 		networkStorage:set(unit_number, nil)
 	end)

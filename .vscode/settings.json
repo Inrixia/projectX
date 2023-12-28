@@ -8,5 +8,6 @@
 	],
 	"Lua.workspace.library": ["c:\\Program Files (x86)\\Steam\\steamapps\\common\\Factorio\\data"],
 	"Lua.workspace.userThirdParty": ["c:\\Users\\Inrixia\\AppData\\Roaming\\Code\\User\\workspaceStorage\\ec600e7b692db8e23c73a90efc26cc70\\justarandomgeek.factoriomod-debug\\sumneko-3rd"],
-	"Lua.workspace.checkThirdParty": "ApplyInMemory"
+	"Lua.workspace.checkThirdParty": "ApplyInMemory",
+	"Lua.diagnostics.disable": ["different-requires"]
 }

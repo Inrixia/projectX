@@ -63,7 +63,6 @@ function EntityBase:onEntityCreated(method)
 end
 
 function EntityBase:ensureOnEntityCreated()
-	self:ensureOnEntityRemoved()
 	entityCreated.add(self.protoName, self._onEntityCreated)
 	self.ensureOnEntityCreated = nullFunc
 end
@@ -90,7 +89,6 @@ function EntityBase:onLoad(method)
 end
 
 function EntityBase:ensureOnLoad()
-	self:ensureOnEntityCreated()
 	load(self._onLoad)
 	self.ensureOnLoad = nullFunc
 end
@@ -116,71 +114,45 @@ function EntityBase:onNthTick(tick, method)
 	return self
 end
 
---- @alias makeSearchArea fun(entity: LuaEntity): BoundingBox
-
---- @type makeSearchArea
-function verticalSearchArea(entity)
-	local collision_box = entity.prototype.collision_box
-	return { { collision_box.left_top.x, collision_box.left_top.y - 0.5 }, { collision_box.right_bottom.x, collision_box.right_bottom.y + 0.5 } }
-end
-
---- @type makeSearchArea
-function horizontalSearchArea(entity)
-	local collision_box = entity.prototype.collision_box
-	return { { collision_box.left_top.x - 0.5, collision_box.left_top.y }, { collision_box.right_bottom.x + 0.5, collision_box.right_bottom.y } }
-end
-
 --- @param entity LuaEntity
 --- @returns LuaEntity[]
 function EntityBase:findAdjacent(entity)
-	local x = entity.position.x
-	local y = entity.position.y
-
-	local surface = entity.surface
-
 	--- @type LuaEntity[]
 	local adjacent_entities = {}
 
-	-- Search vertically (top and bottom)
-	for _, adjacent_entity in pairs(surface.find_entities_filtered({ area = verticalSearchArea(entity) })) do
+
+	local width = entity.tile_width
+	local height = entity.tile_height
+	local x = entity.position.x
+	local y = entity.position.y
+
+	-- Calculate offsets for easier area calculation
+	local width_offset = (width - 1) / 2
+	local height_offset = (height - 1) / 2
+
+	-- Search horizontally (left and right)
+	local horizontal_area = {
+		{ x - width_offset - 1, y - height_offset },
+		{ x + width_offset + 1, y + height_offset }
+	}
+	for _, adjacent_entity in pairs(entity.surface.find_entities(horizontal_area)) do
 		if adjacent_entity.unit_number ~= entity.unit_number then
 			table.insert(adjacent_entities, adjacent_entity)
 		end
 	end
 
-	-- Search horizontally (left and right)
-	for _, adjacent_entity in pairs(surface.find_entities_filtered({ area = horizontalSearchArea(entity) })) do
+	-- Search vertically (top and bottom)
+	local vertical_area = {
+		{ x - width_offset, y - height_offset - 1 },
+		{ x + width_offset, y + height_offset + 1 }
+	}
+	for _, adjacent_entity in pairs(entity.surface.find_entities(vertical_area)) do
 		if adjacent_entity.unit_number ~= entity.unit_number and not adjacent_entities[adjacent_entity.unit_number] then
 			table.insert(adjacent_entities, adjacent_entity)
 		end
 	end
 
 	return adjacent_entities
-end
-
---- @param entity LuaEntity
---- @returns LuaEntity|nil
-function EntityBase:findFirstAdjacent(entity)
-	local x = entity.position.x
-	local y = entity.position.y
-
-	local surface = entity.surface
-
-	-- Search vertically (top and bottom)
-	for _, adjacent_entity in pairs(surface.find_entities_filtered({ area = verticalSearchArea(entity), limit = 1 })) do
-		if adjacent_entity.unit_number ~= entity.unit_number then
-			return adjacent_entity
-		end
-	end
-
-	-- Search horizontally (left and right)
-	for _, adjacent_entity in pairs(surface.find_entities_filtered({ area = horizontalSearchArea(entity), limit = 1 })) do
-		if adjacent_entity.unit_number ~= entity.unit_number then
-			return adjacent_entity
-		end
-	end
-
-	return nil
 end
 
 return EntityBase

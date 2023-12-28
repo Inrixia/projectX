@@ -22,10 +22,10 @@ function Network:ensureRefs(entityName)
 	if self.refs[entityName] == nil then self.refs[entityName] = {} end
 	local refs = self.refs;
 
-	--- @type Network.getRefs
-	self.ensureRefs = function(_, entityName) return refs[entityName] end
+	-- --- @type Network.getRefs
+	-- self.ensureRefs = function(_, entityName) return refs[entityName] end
 
-	return self:ensureRefs(entityName)
+	return refs[entityName]
 end
 
 --- @param unit_number integer
