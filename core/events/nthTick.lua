@@ -1,13 +1,14 @@
+--- @type table<integer, onNthTick[]>
 local nthTickHandlers = {}
 
---- @alias onNthTick fun(event:EventData.on_gui_opened)
+--- @alias onNthTick fun(event: NthTickEventData, remove: fun())
 
 --- @type fun(tick: integer, method: onNthTick)
 function add(tick, method)
 	if (nthTickHandlers[tick] == nil) then
 		nthTickHandlers[tick] = {}
-		script.on_nth_tick(tick, function()
-			for _, handler in pairs(nthTickHandlers[tick]) do handler() end
+		script.on_nth_tick(tick, function(eventData)
+			for _, handler in pairs(nthTickHandlers[tick]) do handler(eventData, function() remove(tick, handler) end) end
 		end)
 	end
 	table.insert(nthTickHandlers[tick], method)

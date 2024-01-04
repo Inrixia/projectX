@@ -13,19 +13,37 @@ end
 
 --- @alias GlobalStorage.ensureStorage fun(self: GlobalStorage): table<any, any>
 --- @type GlobalStorage.ensureStorage
-function GlobalStorage:ensureRoot()
+function GlobalStorage:ensureRootStorage()
 	local key = self.key
 	if global[key] == nil then global[key] = {} end
+	local rootStorage = global[key]
 
 	--- @type GlobalStorage.ensureStorage
-	self.ensureRoot = function() return global[key] end
-	return self:ensureRoot()
+	self.ensureRootStorage = function() return rootStorage end
+	return self:ensureRootStorage()
+end
+
+--- @generic T: table, K, V
+--- @return fun(table: table<K, V>, index?: K): K, V
+--- @return T
+function GlobalStorage:pairs()
+	if global[self.key] == nil then return pairs({}) end
+	return pairs(global[self.key])
+end
+
+--- @generic K, V
+--- @param index? K
+--- @return K?
+--- @return V?
+function GlobalStorage:next(index)
+	if global[self.key] == nil then return nil end
+	return next(global[self.key], index)
 end
 
 --- @alias GlobalStorage.set fun(self: GlobalStorage, key: any, value: any)
 --- @type GlobalStorage.set
 function GlobalStorage:set(key, value)
-	local rootStorage = self:ensureRoot()
+	local rootStorage = self:ensureRootStorage()
 
 	--- @type GlobalStorage.set
 	self.set = function(_, key, value) rootStorage[key] = value end
@@ -36,7 +54,7 @@ end
 --- @alias GlobalStorage.ensure fun(self: GlobalStorage, key: any, default: T): T
 --- @type GlobalStorage.ensure
 function GlobalStorage:ensure(key, default)
-	local rootStorage = self:ensureRoot()
+	local rootStorage = self:ensureRootStorage()
 
 	--- @type GlobalStorage.ensure
 	self.ensure = function(_, key, default)
@@ -49,7 +67,7 @@ end
 --- @alias GlobalStorage.get fun(self: GlobalStorage, key: any): any
 --- @type GlobalStorage.get
 function GlobalStorage:get(key)
-	local rootStorage = self:ensureRoot()
+	local rootStorage = self:ensureRootStorage()
 
 	--- @type GlobalStorage.get
 	self.get = function(_, key) return rootStorage[key] end

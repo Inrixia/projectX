@@ -1,4 +1,4 @@
---- @alias refLookupTable table<integer, NetworkStorage>
+--- @alias refLookupTable table<integer, NetStorage>
 
 --- @class Network
 --- @field refs table<string, refLookupTable>
@@ -15,6 +15,10 @@ function Network.new()
 	return self
 end
 
+function Network:hasPower()
+	return false
+end
+
 --- @alias Network.getRefs fun(self: Network, entityName: string): refLookupTable
 
 --- @type Network.getRefs
@@ -22,14 +26,14 @@ function Network:ensureRefs(entityName)
 	if self.refs[entityName] == nil then self.refs[entityName] = {} end
 	local refs = self.refs;
 
-	-- --- @type Network.getRefs
-	-- self.ensureRefs = function(_, entityName) return refs[entityName] end
+	--- @type Network.getRefs
+	self.ensureRefs = function(_, entityName) return refs[entityName] end
 
-	return refs[entityName]
+	return self:ensureRefs(entityName)
 end
 
 --- @param unit_number integer
---- @param storage NetworkStorage
+--- @param storage NetStorage
 function Network:add(unit_number, storage)
 	self:ensureRefs(storage.name)[unit_number] = storage
 	self.refsCount = self.refsCount + 1
@@ -37,7 +41,7 @@ function Network:add(unit_number, storage)
 end
 
 --- @param unit_number integer
---- @param storage NetworkStorage
+--- @param storage NetStorage
 function Network:remove(unit_number, storage)
 	storage.network = nil
 
@@ -49,11 +53,11 @@ function Network:remove(unit_number, storage)
 end
 
 --- @class VisitedSet
---- @field nodes table<integer, NetworkStorage>
+--- @field nodes table<integer, NetStorage>
 --- @field nodesCount integer
 
 --- @param unit_number integer
---- @param node NetworkStorage
+--- @param node NetStorage
 --- @param visitedSet VisitedSet
 local function depthFirstSearch(unit_number, node, visitedSet)
 	visitedSet.nodes[unit_number] = node
@@ -77,7 +81,7 @@ local function allKeysIn(tableA, tableB)
 end
 
 
---- @param storage NetworkStorage
+--- @param storage NetStorage
 function Network.split(storage)
 	--- @type VisitedSet[]
 	local visitedSets = {}
