@@ -15,10 +15,10 @@ local scriptRevivedEntity = require("scriptRevivedEntity")
 --- @param name string
 --- @param method onEntityCreated
 function add(name, method)
-	robotBuiltEntity:add(name, method)
-	builtEntity:add(name, method)
-	scriptBuiltEntity:add(name, method)
-	scriptRevivedEntity:add(name, method)
+	robotBuiltEntity:set(name, method)
+	builtEntity:set(name, method)
+	scriptBuiltEntity:set(name, method)
+	scriptRevivedEntity:set(name, method)
 end
 
 --- @param name string
@@ -30,6 +30,6 @@ function remove(name)
 end
 
 return {
-	add = add,
+	set = add,
 	remove = remove
 }

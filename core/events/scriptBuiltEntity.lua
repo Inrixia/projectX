@@ -3,7 +3,7 @@ local EventHandler = require("EventHandler")
 --- @alias onScriptBuiltEntity fun(event:EventData.script_raised_built)
 
 --- @class ScriptBuiltEntity : EventHandler
---- @field add fun(self: EventHandler, name: string, method: onScriptBuiltEntity)
+--- @field set fun(self: EventHandler, name: string, method: onScriptBuiltEntity)
 --- @field remove fun(self: EventHandler, name: string)
 local scriptBuiltEntity = EventHandler.new(defines.events.script_raised_built, function(methods, filters)
 	script.on_event(defines.events.script_raised_built, function(event)

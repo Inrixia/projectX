@@ -15,7 +15,7 @@ setmetatable(Alerts, { __index = Alerts })
 
 --- @class AlertStorage : GlobalArray
 --- @field next fun(self: GlobalArray, index?: integer): integer?, AlertItem?
---- @field ipairs fun(self: GlobalArray): fun(table: AlertItem[], i?: integer):integer, AlertItem
+--- @field ipairs fun(self: GlobalArray): fun(table: AlertItem[], i?: integer): integer, AlertItem
 --- @field remove fun(self: GlobalArray, index: integer)
 --- @field get fun(self: GlobalArray, index: integer): AlertItem | nil
 --- @field add fun(self: GlobalArray, value: AlertItem): integer

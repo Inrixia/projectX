@@ -32,7 +32,7 @@ function EventHandler.new(eventType, register, makeFilter)
 	return self
 end
 
-function EventHandler:add(key, method)
+function EventHandler:set(key, method)
 	local firstMethod = next(self.methods) == nil
 	self.methods[key] = method
 

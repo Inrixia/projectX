@@ -9,10 +9,10 @@ local scriptDestroyedEntity = require("scriptDestroyedEntity")
 --- @param name string
 --- @param method onEntityRemoved
 function add(name, method)
-	playerMinedEntity:add(name, method)
-	robotMinedEntity:add(name, method)
-	entityDied:add(name, method)
-	scriptDestroyedEntity:add(name, method)
+	playerMinedEntity:set(name, method)
+	robotMinedEntity:set(name, method)
+	entityDied:set(name, method)
+	scriptDestroyedEntity:set(name, method)
 end
 
 --- @param name string
@@ -24,6 +24,6 @@ function remove(name)
 end
 
 return {
-	add = add,
+	set = add,
 	remove = remove
 }

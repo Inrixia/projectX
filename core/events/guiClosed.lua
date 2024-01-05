@@ -3,7 +3,7 @@ local EventHandler = require("EventHandler")
 --- @alias onGuiClosed fun(event:EventData.on_gui_closed)
 
 --- @class GuiClosed : EventHandler
---- @field add fun(self: EventHandler, name: string, method: onGuiClosed)
+--- @field set fun(self: EventHandler, name: string, method: onGuiClosed)
 --- @field remove fun(self: EventHandler, name: string)
 local guiClosed = EventHandler.new(defines.events.on_gui_closed, function(methods)
 	script.on_event(defines.events.on_gui_closed, function(event)

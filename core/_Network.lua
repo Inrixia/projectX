@@ -35,7 +35,7 @@ end
 --- @param unit_number integer
 --- @param storage NetStorage
 function Network:add(unit_number, storage)
-	self:ensureRefs(storage.name)[unit_number] = storage
+	self:ensureRefs(storage.entity.name)[unit_number] = storage
 	self.refsCount = self.refsCount + 1
 	storage.network = self
 end

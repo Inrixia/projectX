@@ -1,14 +1,14 @@
 local EntityBase = require("_EntityBase")
 local Network = require("_Network")
 
-local Alerts = require("_Alerts")
-
 --- @class NetStorage
---- @field name string
+--- @field entity LuaEntity
 --- @field network Network|nil
 --- @field adjacent table<integer, NetStorage>
 
 --- @class NetworkedEntityStorage : GlobalStorage
+--- @field next fun(self: GlobalStorage, unit_number?: integer): integer?, NetStorage?
+--- @field pairs fun(self: GlobalStorage): fun(table: table<integer, NetStorage>, unit_number?: integer): integer, NetStorage
 --- @field ensure fun(self: GlobalStorage, unit_number: integer, default: NetStorage): NetStorage
 --- @field get fun(self: GlobalStorage, unit_number: integer): NetStorage | nil
 --- @field set fun(self: GlobalStorage, unit_number: integer, value: NetStorage | nil)
@@ -28,7 +28,7 @@ function NetworkedEntity.new(protoBase)
 
 	self:onEntityCreated(function(event)
 		local entity = event.created_entity
-		local netStorage = self.storage:ensure(entity.unit_number, { name = entity.name, adjacent = {} })
+		local netStorage = self.storage:ensure(entity.unit_number, { entity = entity, adjacent = {} })
 		for _, adjacentEntity in pairs(self:findAdjacent(entity)) do
 			local adjacentStorage = self.storage:get(adjacentEntity.unit_number)
 			if adjacentStorage ~= nil then
@@ -44,10 +44,6 @@ function NetworkedEntity.new(protoBase)
 
 		if netStorage.network == nil then
 			Network.new():add(entity.unit_number, netStorage)
-		end
-
-		if not netStorage.network:hasPower() then
-			Alerts.raise(entity, "Netork has no power!", "utility/electricity_icon_unplugged")
 		end
 	end)
 

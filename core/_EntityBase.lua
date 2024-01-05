@@ -1,27 +1,20 @@
-local load = require("events/load")
-
 local entityCreated = require("events/entityCreated")
 local entityRemoved = require("events/entityRemoved")
 local guiOpened = require("events/guiOpened")
 local nthTick = require("events/nthTick")
 
---- @alias EntityBase.onLoad fun(storage: table, unit_number: integer)
+
 --- @alias EntityBase.onEntityCreated onEntityCreated
 --- @alias EntityBase.onEntityRemoved onEntityRemoved
 --- @alias EntityBase.onEntityGuiOpened onGuiOpened
-
-local nullFunc = function() end
+--- @alias EntityBase.onNthTick onNthTick
 
 --- @class EntityBase
 --- @field public protoName string
+--- @field private _onNthTick table<integer, EntityBase.onNthTick>
 --- @field private _onEntityCreated EntityBase.onEntityCreated
 --- @field private _onEntityRemoved EntityBase.onEntityRemoved
---- @field private _onLoad EntityBase.onLoad
 --- @field private _onGuiOpened EntityBase.onEntityGuiOpened
---- @field private ensureOnEntityCreated fun(self: EntityBase)
---- @field private ensureOnLoad fun(self: EntityBase)
---- @field private ensureOnEntityRemoved fun(self: EntityBase)
---- @field private ensureOnGuiOpened fun(self: EntityBase)
 local EntityBase = {}
 EntityBase.__index = EntityBase
 
@@ -37,6 +30,8 @@ function EntityBase.new(prototype)
 
 	self.protoName = prototype.protoName
 	registeredEntities[prototype.protoName] = false
+
+	self._onNthTick = {}
 
 	return self
 end
@@ -54,63 +49,37 @@ function EntityBase.overloadMethod(originalMethod, newMethod)
 	end
 end
 
+--- @param method EntityBase.onNthTick
+--- @returns EntityBase
+function EntityBase:onNthTick(tick, method)
+	if self._onNthTick[tick] ~= nil then nthTick.remove(tick, self._onNthTick[tick]) end
+
+	self._onNthTick[tick] = EntityBase.overloadMethod(self._onNthTick[tick], method)
+	nthTick.add(tick, self._onNthTick[tick])
+	return self
+end
+
 --- @param method EntityBase.onEntityCreated
 --- @returns EntityBase
 function EntityBase:onEntityCreated(method)
 	self._onEntityCreated = EntityBase.overloadMethod(self._onEntityCreated, method)
-	self:ensureOnEntityCreated()
+	entityCreated.set(self.protoName, self._onEntityCreated)
 	return self
-end
-
-function EntityBase:ensureOnEntityCreated()
-	entityCreated.add(self.protoName, self._onEntityCreated)
-	self.ensureOnEntityCreated = nullFunc
 end
 
 --- @param method EntityBase.onEntityRemoved
 --- @returns EntityBase
 function EntityBase:onEntityRemoved(method)
 	self._onEntityRemoved = EntityBase.overloadMethod(self._onEntityRemoved, method)
-	self:ensureOnEntityRemoved()
+	entityRemoved.set(self.protoName, self._onEntityRemoved)
 	return self
-end
-
-function EntityBase:ensureOnEntityRemoved()
-	entityRemoved.add(self.protoName, self._onEntityRemoved)
-	self.ensureOnEntityRemoved = nullFunc
-end
-
---- @param method EntityBase.onLoad
---- @returns EntityBase
-function EntityBase:onLoad(method)
-	self._onLoad = EntityBase.overloadMethod(self._onLoad, method)
-	self:ensureOnLoad()
-	return self
-end
-
-function EntityBase:ensureOnLoad()
-	load(self._onLoad)
-	self.ensureOnLoad = nullFunc
 end
 
 --- @param method EntityBase.onEntityGuiOpened
 --- @returns EntityBase
 function EntityBase:onGuiOpened(method)
 	self._onGuiOpened = EntityBase.overloadMethod(self._onGuiOpened, method)
-	self:ensureOnGuiOpened()
-	return self
-end
-
-function EntityBase:ensureOnGuiOpened()
-	guiOpened:add(self.protoName, self._onGuiOpened)
-	self.ensureOnGuiOpened = nullFunc
-end
-
---- @param tick integer
---- @param method onNthTick
---- @returns EntityBase
-function EntityBase:onNthTick(tick, method)
-	nthTick.add(tick, method)
+	guiOpened:set(self.protoName, self._onGuiOpened)
 	return self
 end
 
@@ -119,7 +88,6 @@ end
 function EntityBase:findAdjacent(entity)
 	--- @type LuaEntity[]
 	local adjacent_entities = {}
-
 
 	local width = entity.tile_width
 	local height = entity.tile_height

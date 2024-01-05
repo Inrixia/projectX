@@ -33,21 +33,21 @@ end
 --- @param method onGuiElemChanged
 --- @returns GuiElement
 function GuiElement:onChanged(method)
-	guiElemChanged:add(self.name, method)
+	guiElemChanged:set(self.name, method)
 	return self
 end
 
 --- @param method onGuiClosed
 --- @returns GuiElement
 function GuiElement:onClosed(method)
-	guiClosed:add(self.name, method)
+	guiClosed:set(self.name, method)
 	return self
 end
 
 --- @param method onGuiClicked
 --- @returns GuiElement
 function GuiElement:onClick(method)
-	guiClicked:add(self.name, method)
+	guiClicked:set(self.name, method)
 	return self
 end
 

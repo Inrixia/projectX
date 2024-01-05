@@ -3,24 +3,40 @@ local hash = require("lib/hash")
 local NetworkedEntity = require("_NetworkedEntity")
 local GuiElement = require("_GuiElement")
 
+local Alerts = require("_Alerts")
+
 --- @class Interface : NetworkedEntity
 local interface = NetworkedEntity.new(require("Interface_proto"))
 
---- @class StorageValue
---- @field entity LuaEntity
+--- @param netStorage NetStorage
+function interface.tick(netStorage)
+	local entity = netStorage.entity
+	local shouldBeActive = true
 
---- @class InstanceStorage : GlobalStorage
---- @field ensure fun(self: GlobalStorage, unit_number: integer, default: StorageValue): StorageValue
---- @field get fun(self: GlobalStorage, unit_number: integer): StorageValue | nil
---- @field set fun(self: GlobalStorage, unit_number: integer, value: StorageValue | nil)
-local interfaceStorage = require("storage/global").new(interface.protoName)
+	if not netStorage.network:hasPower() then
+		Alerts.raise(entity, "Netork has no power!", "utility/electricity_icon_unplugged")
+		shouldBeActive = false
+	end
+
+	entity.active = shouldBeActive
+end
 
 interface:onEntityCreated(function(event)
-	local storage = interfaceStorage:ensure(event.created_entity.unit_number, {
-		entity = event.created_entity
-	})
-	storage.entity.get_inventory(defines.inventory.chest).set_bar(1)
+	local entity = event.created_entity
+	entity.get_inventory(defines.inventory.chest).set_bar(1)
+	entity.active = false
 end)
+
+interface:onNthTick(30, function()
+	for unit_number, netStorage in interface.storage:pairs() do
+		if not netStorage.entity.valid then
+			return interface.storage:set(unit_number, nil)
+		end
+		interface.tick(netStorage)
+	end
+end)
+
+
 
 local filterButton =
 	GuiElement.new("filterButton", { type = "choose-elem-button", elem_type = "item" })
@@ -29,7 +45,7 @@ local filterButton =
 		local unit_number = changedEvent.element.tags.unit_number
 		if type(unit_number) ~= "number" then return end
 
-		local storage = interfaceStorage:get(unit_number)
+		local storage = interface.storage:get(unit_number)
 		if storage == nil then return end
 		local entity = storage.entity
 
@@ -84,5 +100,5 @@ interface:onGuiOpened(function(openedEvent)
 	filterButton.tags = { unit_number = entity.unit_number }
 
 	luaInterfaceGui.visible = true
-	player.opened = luaInterfaceGui
+	-- player.opened = luaInterfaceGui
 end)
