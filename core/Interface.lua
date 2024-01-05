@@ -11,20 +11,23 @@ local interface = NetworkedEntity.new(require("Interface_proto"))
 --- @param netStorage NetStorage
 function interface.tick(netStorage)
 	local entity = netStorage.entity
-	local shouldBeActive = true
 
 	if not netStorage.network:hasPower() then
-		Alerts.raise(entity, "Netork has no power!", "utility/electricity_icon_unplugged")
-		shouldBeActive = false
+		Alerts.raise(entity, "Network has no power!", "utility/electricity_icon_unplugged")
+		interface.disable(netStorage)
+		return
 	end
 
-	entity.active = shouldBeActive
+	interface.enable(netStorage)
+	Alerts.resolve(entity.unit_number)
 end
 
 interface:onEntityCreated(function(event)
 	local entity = event.created_entity
 	entity.get_inventory(defines.inventory.chest).set_bar(1)
-	entity.active = false
+	local netStorage = interface:getValidStorage(entity.unit_number)
+	if netStorage == nil then return end
+	interface.tick(netStorage)
 end)
 
 interface:onNthTick(30, function()
@@ -36,8 +39,6 @@ interface:onNthTick(30, function()
 	end
 end)
 
-
-
 local filterButton =
 	GuiElement.new("filterButton", { type = "choose-elem-button", elem_type = "item" })
 	:onChanged(function(changedEvent)
@@ -45,7 +46,7 @@ local filterButton =
 		local unit_number = changedEvent.element.tags.unit_number
 		if type(unit_number) ~= "number" then return end
 
-		local storage = interface.storage:get(unit_number)
+		local storage = interface:getValidStorage(unit_number)
 		if storage == nil then return end
 		local entity = storage.entity
 
@@ -54,7 +55,7 @@ local filterButton =
 
 		if selected_item == nil then
 			entity.link_id = 0
-			inventory.set_filter(1, selected_item)
+			inventory.set_filter(1, nil)
 			inventory.set_bar(1)
 		elseif type(selected_item) == "string" then
 			entity.link_id = hash(selected_item)
@@ -102,3 +103,27 @@ interface:onGuiOpened(function(openedEvent)
 	luaInterfaceGui.visible = true
 	-- player.opened = luaInterfaceGui
 end)
+
+--- @param netStorage NetStorage
+function interface.disable(netStorage)
+	if not netStorage.enabled then return end
+
+	local entity = netStorage.entity
+	entity.active = false
+	entity.operable = false
+	entity.get_inventory(defines.inventory.chest).set_bar(1)
+
+	netStorage.enabled = false
+end
+
+--- @param netStorage NetStorage
+function interface.enable(netStorage)
+	if netStorage.enabled then return end
+
+	local entity = netStorage.entity
+	entity.active = true
+	entity.operable = true
+	entity.get_inventory(defines.inventory.chest).set_bar()
+
+	netStorage.enabled = true
+end

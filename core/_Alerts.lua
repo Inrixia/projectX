@@ -13,13 +13,21 @@ Alerts = {}
 Alerts.__index = Alerts
 setmetatable(Alerts, { __index = Alerts })
 
---- @class AlertStorage : GlobalArray
---- @field next fun(self: GlobalArray, index?: integer): integer?, AlertItem?
---- @field ipairs fun(self: GlobalArray): fun(table: AlertItem[], i?: integer): integer, AlertItem
---- @field remove fun(self: GlobalArray, index: integer)
---- @field get fun(self: GlobalArray, index: integer): AlertItem | nil
---- @field add fun(self: GlobalArray, value: AlertItem): integer
-Alerts.storage = require("storage/globalArray").new("alerts")
+--- @class AlertStorage : GlobalStorage
+--- @field next fun(self: GlobalStorage, unit_number?: integer): integer?, AlertItem?
+--- @field pairs fun(self: GlobalStorage): fun(table: table<integer, AlertItem>, unit_number?: integer): integer, AlertItem
+--- @field ensure fun(self: GlobalStorage, unit_number: integer, default: AlertItem): AlertItem
+--- @field set fun(self: GlobalStorage, unit_number: integer, value: AlertItem | nil)
+--- @field get fun(self: GlobalStorage, unit_number: integer): AlertItem | nil
+--- @field getValid fun(self: GlobalStorage, unit_number: integer): AlertItem | nil
+Alerts.storage = require("storage/globalStorage").new("alerts")
+
+--- @param alertItem AlertItem|nil
+function removeAlert(alertItem)
+	if alertItem == nil then return end
+	Alerts.storage:set(alertItem.entity.unit_number, nil)
+	if alertItem.iconId ~= nil then rendering.destroy(alertItem.iconId) end
+end
 
 function _ensureListener()
 	onNthTick.add(30, function(event, remove)
@@ -28,12 +36,8 @@ function _ensureListener()
 			ensureListener = _ensureListener
 		end
 
-		for alertId, alert in Alerts.storage:ipairs() do
-			if not alert.entity.valid then
-				Alerts.storage:remove(alertId)
-				if alert.iconId ~= nil then rendering.destroy(alert.iconId) end
-				return
-			end
+		for _, alert in Alerts.storage:pairs() do
+			if not alert.entity.valid then removeAlert(alert) end
 
 			for _, player in pairs(game.players) do
 				if player.connected and player.force == alert.entity.force then
@@ -56,9 +60,9 @@ end)
 --- @param entity LuaEntity
 --- @param message LocalisedString
 --- @param spritePath SpritePath
---- @returns integer
 function Alerts.raise(entity, message, spritePath)
-	local alertId = Alerts.storage:add({
+	if (Alerts.storage:get(entity.unit_number) ~= nil) then return end
+	Alerts.storage:set(entity.unit_number, {
 		iconId = rendering.draw_sprite({
 			sprite = spritePath,
 			target = entity,
@@ -73,12 +77,11 @@ function Alerts.raise(entity, message, spritePath)
 		message = message
 	})
 	ensureListener()
-	return alertId
 end
 
---- @param alertId integer
-function Alerts.resolve(alertId)
-	Alerts.storage:remove(alertId)
+--- @param unit_number integer
+function Alerts.resolve(unit_number)
+	removeAlert(Alerts.storage:get(unit_number))
 end
 
 return Alerts

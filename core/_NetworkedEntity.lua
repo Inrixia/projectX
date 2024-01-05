@@ -3,6 +3,7 @@ local Network = require("_Network")
 
 --- @class NetStorage
 --- @field entity LuaEntity
+--- @field enabled boolean
 --- @field network Network|nil
 --- @field adjacent table<integer, NetStorage>
 
@@ -10,8 +11,9 @@ local Network = require("_Network")
 --- @field next fun(self: GlobalStorage, unit_number?: integer): integer?, NetStorage?
 --- @field pairs fun(self: GlobalStorage): fun(table: table<integer, NetStorage>, unit_number?: integer): integer, NetStorage
 --- @field ensure fun(self: GlobalStorage, unit_number: integer, default: NetStorage): NetStorage
---- @field get fun(self: GlobalStorage, unit_number: integer): NetStorage | nil
 --- @field set fun(self: GlobalStorage, unit_number: integer, value: NetStorage | nil)
+--- @field get fun(self: GlobalStorage, unit_number: integer): NetStorage | nil
+--- @field getValid fun(self: GlobalStorage, unit_number: integer): NetStorage | nil
 
 --- @class NetworkedEntity : EntityBase
 --- @field storage NetworkedEntityStorage
@@ -19,7 +21,19 @@ NetworkedEntity = {}
 NetworkedEntity.__index = NetworkedEntity
 setmetatable(NetworkedEntity, { __index = EntityBase })
 
-NetworkedEntity.storage = require("storage/global").new("networkedEntity")
+NetworkedEntity.storage = require("storage/globalStorage").new("networkedEntity")
+
+--- @param unit_number integer
+function NetworkedEntity:getValidStorage(unit_number)
+	local netStorage = self.storage:get(unit_number)
+	if netStorage == nil then return nil end
+	if not netStorage.entity.valid then
+		self.storage:set(unit_number, nil)
+		return nil
+	end
+
+	return netStorage
+end
 
 --- @param protoBase ProtoBase
 function NetworkedEntity.new(protoBase)
@@ -28,7 +42,11 @@ function NetworkedEntity.new(protoBase)
 
 	self:onEntityCreated(function(event)
 		local entity = event.created_entity
-		local netStorage = self.storage:ensure(entity.unit_number, { entity = entity, adjacent = {} })
+		local netStorage = self.storage:ensure(entity.unit_number, {
+			entity = entity,
+			adjacent = {},
+			enabled = true
+		})
 		for _, adjacentEntity in pairs(self:findAdjacent(entity)) do
 			local adjacentStorage = self.storage:get(adjacentEntity.unit_number)
 			if adjacentStorage ~= nil then
