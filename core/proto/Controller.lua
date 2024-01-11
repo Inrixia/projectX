@@ -1,22 +1,12 @@
 local ProtoBase = require("_ProtoBase")
 
-return ProtoBase.new("projectX_energy_interface", function(prototypeName)
-	local entity = table.deepcopy(data.raw["electric-energy-interface"]["electric-energy-interface"])
+return ProtoBase.new("projectX_controller", function(prototypeName)
+	local entity = table.deepcopy(data.raw["lamp"]["small-lamp"])
 	entity.name = prototypeName
 	entity.gui_mode = "none"
-	entity.energy_source = {
-		type = "electric",
-		usage_priority = "secondary-input",
-		drain = "250kW",
-		buffer_capacity = "1MJ",
-		render_no_power_icon = true,
-		render_no_network_icon = true,
-		emissions_per_minute = nil,
-		input_flow_limit = "500kW",
-		output_flow_limit = "0W"
-	}
-	entity.energy_usage = nil
-	entity.energy_production = nil
+
+	entity.energy_usage_per_tick = "250kW"
+	entity.always_on = true
 
 	-- Item
 	local item = table.deepcopy(data.raw.item["iron-chest"])
