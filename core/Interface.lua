@@ -6,38 +6,29 @@ local GuiElement = require("_GuiElement")
 local Alerts = require("_Alerts")
 
 --- @class Interface : NetworkedEntity
-local interface = NetworkedEntity.new(require("Interface_proto"))
+local interface = NetworkedEntity.new(require("proto/Interface"))
 
---- @param netStorage NetStorage
-function interface.tick(netStorage)
-	local entity = netStorage.entity
 
-	if not netStorage.network:hasPower() then
-		Alerts.raise(entity, "Network has no power!", "utility/electricity_icon_unplugged")
-		interface.disable(netStorage)
-		return
-	end
+--- @param netEntity NetEntity
+function interface.tick(netEntity)
+	local entity = netEntity.entity
 
-	interface.enable(netStorage)
+	-- if not netEntity.network:hasPower() then
+	-- 	Alerts.raise(entity, "Network has no power!", "utility/electricity_icon_unplugged")
+	-- 	interface.disable(netEntity)
+	-- 	return
+	-- end
+
+	interface.enable(netEntity)
 	Alerts.resolve(entity.unit_number)
 end
 
-interface:onEntityCreated(function(event)
-	local entity = event.created_entity
-	entity.get_inventory(defines.inventory.chest).set_bar(1)
-	local netStorage = interface:getValidStorage(entity.unit_number)
-	if netStorage == nil then return end
-	interface.tick(netStorage)
+interface:onEntityCreatedWithStorage(function(netEntity)
+	netEntity.entity.get_inventory(defines.inventory.chest).set_bar(1)
+	interface.tick(netEntity)
 end)
 
-interface:onNthTick(30, function()
-	for unit_number, netStorage in interface.storage:pairs() do
-		if not netStorage.entity.valid then
-			return interface.storage:set(unit_number, nil)
-		end
-		interface.tick(netStorage)
-	end
-end)
+interface:onNthTick(30, interface.tick)
 
 local filterButton =
 	GuiElement.new("filterButton", { type = "choose-elem-button", elem_type = "item" })
@@ -46,9 +37,9 @@ local filterButton =
 		local unit_number = changedEvent.element.tags.unit_number
 		if type(unit_number) ~= "number" then return end
 
-		local storage = interface:getValidStorage(unit_number)
-		if storage == nil then return end
-		local entity = storage.entity
+		local netEntity = NetEntity.getValid(unit_number)
+		if netEntity == nil then return end
+		local entity = netEntity.entity
 
 		local inventory = entity.get_inventory(defines.inventory.chest)
 		if inventory == nil then return end
@@ -104,26 +95,26 @@ interface:onGuiOpened(function(openedEvent)
 	-- player.opened = luaInterfaceGui
 end)
 
---- @param netStorage NetStorage
-function interface.disable(netStorage)
-	if not netStorage.enabled then return end
+--- @param netEntity NetEntity
+function interface.disable(netEntity)
+	if not netEntity.enabled then return end
 
-	local entity = netStorage.entity
+	local entity = netEntity.entity
 	entity.active = false
 	entity.operable = false
 	entity.get_inventory(defines.inventory.chest).set_bar(1)
 
-	netStorage.enabled = false
+	netEntity.enabled = false
 end
 
---- @param netStorage NetStorage
-function interface.enable(netStorage)
-	if netStorage.enabled then return end
+--- @param netEntity NetEntity
+function interface.enable(netEntity)
+	if netEntity.enabled then return end
 
-	local entity = netStorage.entity
+	local entity = netEntity.entity
 	entity.active = true
 	entity.operable = true
 	entity.get_inventory(defines.inventory.chest).set_bar()
 
-	netStorage.enabled = true
+	netEntity.enabled = true
 end

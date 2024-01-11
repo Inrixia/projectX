@@ -1,8 +1,9 @@
-local ProtoBase = require("core/_ProtoBase")
+local ProtoBase = require("_ProtoBase")
 
 return ProtoBase.new("projectX_cable", function(prototypeName)
-	local entity = table.deepcopy(data.raw["wall"]["stone-wall"])
+	local entity = table.deepcopy(data.raw["heat-pipe"]["heat-pipe"])
 	entity.name = prototypeName
+	entity.heat_buffer.connections = {}
 
 	-- Item
 	local item = table.deepcopy(data.raw.item["iron-chest"])

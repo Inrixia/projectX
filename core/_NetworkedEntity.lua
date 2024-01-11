@@ -1,38 +1,43 @@
 local EntityBase = require("_EntityBase")
-local Network = require("_Network")
+local NetEntity = require("_NetEntity")
+local ObjectStorage = require("storage/objectStorage")
 
---- @class NetStorage
---- @field entity LuaEntity
---- @field enabled boolean
---- @field network Network|nil
---- @field adjacent table<integer, NetStorage>
+local nthTick = require("events/nthTick")
 
---- @class NetworkedEntityStorage : GlobalStorage
---- @field next fun(self: GlobalStorage, unit_number?: integer): integer?, NetStorage?
---- @field pairs fun(self: GlobalStorage): fun(table: table<integer, NetStorage>, unit_number?: integer): integer, NetStorage
---- @field ensure fun(self: GlobalStorage, unit_number: integer, default: NetStorage): NetStorage
---- @field set fun(self: GlobalStorage, unit_number: integer, value: NetStorage | nil)
---- @field get fun(self: GlobalStorage, unit_number: integer): NetStorage | nil
---- @field getValid fun(self: GlobalStorage, unit_number: integer): NetStorage | nil
+--- @alias ProtoNetEntityStorage table<integer, NetEntity|nil>
+
+--- @class NetEntityProtoStorage : ObjectStorage
+--- @field next fun(self: ObjectStorage, protoName?: string): string?, table<string, ProtoNetEntityStorage>?
+--- @field pairs fun(self: ObjectStorage): fun(table: table<string, ProtoNetEntityStorage>, protoName?: string): string, ProtoNetEntityStorage
+--- @field ensure fun(self: ObjectStorage, protoName: string, default: ProtoNetEntityStorage): NetEntityStorage
+--- @field set fun(self: ObjectStorage, protoName: string, value: ProtoNetEntityStorage | nil)
+--- @field get fun(self: ObjectStorage, protoName: string): ProtoNetEntityStorage | nil
 
 --- @class NetworkedEntity : EntityBase
---- @field storage NetworkedEntityStorage
+--- @field protoStorage NetEntityProtoStorage
 NetworkedEntity = {}
 NetworkedEntity.__index = NetworkedEntity
 setmetatable(NetworkedEntity, { __index = EntityBase })
 
-NetworkedEntity.storage = require("storage/globalStorage").new("networkedEntity")
+NetworkedEntity.protoStorage = ObjectStorage.new(global, "netEntityByProto")
 
---- @param unit_number integer
-function NetworkedEntity:getValidStorage(unit_number)
-	local netStorage = self.storage:get(unit_number)
-	if netStorage == nil then return nil end
-	if not netStorage.entity.valid then
-		self.storage:set(unit_number, nil)
-		return nil
-	end
+--- @param tick integer
+--- @param method fun(netEntity: NetEntity, unit_number: integer, event: NthTickEventData, )
+function NetworkedEntity:onNthTick(tick, method)
+	nthTick.add(tick, function(event)
+		for unit_number, netEntity in pairs(self.protoStorage:ensure(self.protoName, {})) do
+			if netEntity.entity.valid then
+				method(netEntity, unit_number, event)
+			end
+		end
+	end)
+end
 
-	return netStorage
+--- @param method fun(netEntity: NetEntity, event: onEntityCreatedEvent)
+function NetworkedEntity:onEntityCreatedWithStorage(method)
+	self:onEntityCreated(function(event)
+		method(NetEntity.from(event), event)
+	end)
 end
 
 --- @param protoBase ProtoBase
@@ -41,42 +46,19 @@ function NetworkedEntity.new(protoBase)
 	--- @cast self NetworkedEntity
 
 	self:onEntityCreated(function(event)
-		local entity = event.created_entity
-		local netStorage = self.storage:ensure(entity.unit_number, {
-			entity = entity,
-			adjacent = {},
-			enabled = true
-		})
-		for _, adjacentEntity in pairs(self:findAdjacent(entity)) do
-			local adjacentStorage = self.storage:get(adjacentEntity.unit_number)
-			if adjacentStorage ~= nil then
-				if netStorage.network == nil then
-					adjacentStorage.network:add(entity.unit_number, netStorage)
-				else
-					Network.merge(netStorage.network, adjacentStorage.network)
-				end
-				netStorage.adjacent[adjacentEntity.unit_number] = adjacentStorage
-				adjacentStorage.adjacent[entity.unit_number] = netStorage
-			end
-		end
-
-		if netStorage.network == nil then
-			Network.new():add(entity.unit_number, netStorage)
-		end
+		local netEntity = NetEntity.from(event)
+		self.protoStorage:ensure(self.protoName, {})[netEntity.unit_number] = netEntity
 	end)
 
 	self:onEntityRemoved(function(event)
-		local unit_number = event.entity.unit_number
-		local netStorage = self.storage:get(unit_number)
-		if netStorage == nil then return end
-		local adjCount = 0
-		for _, adjacentStorage in pairs(netStorage.adjacent) do
-			adjCount = adjCount + 1
-			adjacentStorage.adjacent[unit_number] = nil
+		local netEntityStorage = self.protoStorage:get(self.protoName)
+		if netEntityStorage ~= nil then
+			local netEntity = netEntityStorage[event.entity.unit_number]
+			if netEntity ~= nil then
+				netEntity:remove();
+				netEntityStorage[event.entity.unit_number] = nil
+			end
 		end
-		netStorage.network:remove(unit_number, netStorage)
-		if adjCount > 1 then Network.split(netStorage) end
-		self.storage:set(unit_number, nil)
 	end)
 
 	return self

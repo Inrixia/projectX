@@ -1,3 +1,3 @@
-require("core/Interface_proto")
-require("core/Controller_proto")
-require("core/Cable_proto")
+require("core/proto/Controller")
+require("core/proto/Cable")
+require("core/proto/Interface")

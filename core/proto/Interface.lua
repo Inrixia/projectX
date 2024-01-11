@@ -1,4 +1,4 @@
-local ProtoBase = require("core/_ProtoBase")
+local ProtoBase = require("_ProtoBase")
 
 return ProtoBase.new("projectX_interface", function(prototypeName)
 	local chest = table.deepcopy(data.raw["linked-container"]["linked-chest"])

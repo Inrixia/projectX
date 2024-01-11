@@ -1,69 +1,50 @@
---- @alias refLookupTable table<integer, NetStorage>
+local Dict = require("storage/Dict")
 
 --- @class Network
---- @field refs table<string, refLookupTable>
---- @field refsCount integer
+--- @field channels integer
+--- @field refs Dict
 Network = {}
 Network.__index = Network
 
 script.register_metatable("Network", Network)
 
-function Network.new()
+--- @param netEntity NetEntity?
+function Network.from(netEntity)
 	local self = setmetatable({}, Network)
-	self.refs = {}
-	self.refsCount = 0
+	self.channels = 0
+	self.refs = Dict.new()
+	if netEntity ~= nil then self:add(netEntity) end
 	return self
 end
 
-function Network:hasPower()
-	return false
+--- @param netEntity NetEntity
+function Network:add(netEntity)
+	netEntity.network = self
+	self.refs[netEntity.unit_number] = netEntity
+	print(#self.refs)
 end
 
---- @alias Network.getRefs fun(self: Network, entityName: string): refLookupTable
-
---- @type Network.getRefs
-function Network:ensureRefs(entityName)
-	if self.refs[entityName] == nil then self.refs[entityName] = {} end
-	local refs = self.refs;
-
-	--- @type Network.getRefs
-	self.ensureRefs = function(_, entityName) return refs[entityName] end
-
-	return self:ensureRefs(entityName)
+--- @param netEntity NetEntity
+function Network:remove(netEntity)
+	netEntity.network = nil
+	self.refs:remove(netEntity.unit_number)
+	print(#self.refs)
 end
 
---- @param unit_number integer
---- @param storage NetStorage
-function Network:add(unit_number, storage)
-	self:ensureRefs(storage.entity.name)[unit_number] = storage
-	self.refsCount = self.refsCount + 1
-	storage.network = self
+--- @param previous integer
+--- @param new integer
+function Network:updateChannels(previous, new)
+	self.channels = self.channels + (new - previous)
+	print(self.channels)
 end
 
 --- @param unit_number integer
---- @param storage NetStorage
-function Network:remove(unit_number, storage)
-	storage.network = nil
-
-	local refStorage = self:ensureRefs(storage.name)
-	if (refStorage[unit_number] ~= nil) then
-		refStorage[unit_number] = nil
-		self.refsCount = self.refsCount - 1
-	end
-end
-
---- @class VisitedSet
---- @field nodes table<integer, NetStorage>
---- @field nodesCount integer
-
---- @param unit_number integer
---- @param node NetStorage
---- @param visitedSet VisitedSet
-local function depthFirstSearch(unit_number, node, visitedSet)
-	visitedSet.nodes[unit_number] = node
-	visitedSet.nodesCount = visitedSet.nodesCount + 1
-	for unit_number, neighbor in pairs(node.adjacent) do
-		if not visitedSet.nodes[unit_number] then
+--- @param netEntity NetEntity
+--- @param visitedSet Dict
+local function depthFirstSearch(unit_number, netEntity, visitedSet)
+	visitedSet[unit_number] = netEntity
+	for unit_number, neighbor in pairs(netEntity.adjacent) do
+		if visitedSet[unit_number] == nil then
 			depthFirstSearch(unit_number, neighbor, visitedSet)
 		end
 	end
@@ -81,37 +62,33 @@ local function allKeysIn(tableA, tableB)
 end
 
 
---- @param storage NetStorage
-function Network.split(storage)
-	--- @type VisitedSet[]
+--- @param netEntity NetEntity
+function Network.split(netEntity)
+	--- @type Dict[]
 	local visitedSets = {}
 	local largestSetSize = 0
 	local largestSetIndex = nil
 
 	--- @type fun(unit_number: number): boolean
 	local function haveVisited(unit_number)
-		for _, visited in ipairs(visitedSets) do
-			if (visited.nodes[unit_number] ~= nil) then return true end
+		for _, visitedSet in ipairs(visitedSets) do
+			if (visitedSet[unit_number] ~= nil) then return true end
 		end
 		return false
 	end
 
 	-- Visit all nodes and track sets
-	for unit_number, node in pairs(storage.adjacent) do
+	for unit_number, adjacentNetEntity in pairs(netEntity.adjacent) do
 		if not haveVisited(unit_number) then
-			--- @type VisitedSet
-			local visitedSet = {
-				nodes = {},
-				nodesCount = 0
-			}
-			depthFirstSearch(unit_number, node, visitedSet)
+			local visitedSet = Dict.new()
+			depthFirstSearch(unit_number, adjacentNetEntity, visitedSet)
 
 			-- If the first search returns all adjacent nodes then there is no new networks
-			if #visitedSets == 0 and allKeysIn(storage.adjacent, visitedSet.nodes) then return end
+			if #visitedSets == 0 and allKeysIn(netEntity.adjacent, visitedSet) then return end
 
 			table.insert(visitedSets, visitedSet)
-			if visitedSet.nodesCount > largestSetSize then
-				largestSetSize = visitedSet.nodesCount
+			if #visitedSet > largestSetSize then
+				largestSetSize = #visitedSet
 				largestSetIndex = #visitedSets
 			end
 		end
@@ -120,10 +97,10 @@ function Network.split(storage)
 	-- Create new networks for each set, skipping the largest
 	for i, visited in ipairs(visitedSets) do
 		if i ~= largestSetIndex then
-			local newNetwork = Network.new()
-			for unit_number, visitedStorage in pairs(visited.nodes) do
-				visitedStorage.network:remove(unit_number, visitedStorage)
-				newNetwork:add(unit_number, visitedStorage)
+			local newNetwork = Network.from()
+			for _, visitedNetEntity in pairs(visited) do
+				visitedNetEntity.network:remove(visitedNetEntity)
+				newNetwork:add(visitedNetEntity)
 			end
 		end
 	end
@@ -137,7 +114,7 @@ function Network.merge(networkA, networkB)
 	local largerNetwork
 	local smallerNetwork
 
-	if networkA.refsCount >= networkB.refsCount then
+	if #networkA.refs >= #networkB.refs then
 		largerNetwork = networkA
 		smallerNetwork = networkB
 	else
@@ -145,10 +122,8 @@ function Network.merge(networkA, networkB)
 		smallerNetwork = networkA
 	end
 
-	for _, refLookupTable in pairs(smallerNetwork.refs) do
-		for unit_number, storage in pairs(refLookupTable) do
-			largerNetwork:add(unit_number, storage)
-		end
+	for _, netEntity in pairs(smallerNetwork.refs) do
+		largerNetwork:add(netEntity)
 	end
 
 	return largerNetwork
