@@ -13,18 +13,27 @@ local interface = NetworkedEntity.new(require("proto/Interface"))
 function interface.tick(netEntity)
 	local entity = netEntity.entity
 
-	-- if not netEntity.network:hasPower() then
-	-- 	Alerts.raise(entity, "Network has no power!", "utility/electricity_icon_unplugged")
-	-- 	interface.disable(netEntity)
-	-- 	return
-	-- end
+	if netEntity.network.channels < 0 then
+		Alerts.raise(entity, "Network overloaded! Not enough channels", "utility/too_far_from_roboport_icon")
+		if entity.active then
+			entity.active = false
+			entity.operable = false
+			entity.get_inventory(defines.inventory.chest).set_bar(1)
+		end
+		return
+	end
 
-	interface.enable(netEntity)
+	if not entity.active then
+		entity.active = true
+		entity.operable = true
+		entity.get_inventory(defines.inventory.chest).set_bar()
+	end
 	Alerts.resolve(entity.unit_number)
 end
 
 interface:onEntityCreatedWithStorage(function(netEntity)
 	netEntity.entity.get_inventory(defines.inventory.chest).set_bar(1)
+	netEntity:setChannels(-1);
 	interface.tick(netEntity)
 end)
 
@@ -94,27 +103,3 @@ interface:onGuiOpened(function(openedEvent)
 	luaInterfaceGui.visible = true
 	-- player.opened = luaInterfaceGui
 end)
-
---- @param netEntity NetEntity
-function interface.disable(netEntity)
-	if not netEntity.enabled then return end
-
-	local entity = netEntity.entity
-	entity.active = false
-	entity.operable = false
-	entity.get_inventory(defines.inventory.chest).set_bar(1)
-
-	netEntity.enabled = false
-end
-
---- @param netEntity NetEntity
-function interface.enable(netEntity)
-	if netEntity.enabled then return end
-
-	local entity = netEntity.entity
-	entity.active = true
-	entity.operable = true
-	entity.get_inventory(defines.inventory.chest).set_bar()
-
-	netEntity.enabled = true
-end

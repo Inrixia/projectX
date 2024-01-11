@@ -21,21 +21,23 @@ end
 function Network:add(netEntity)
 	netEntity.network = self
 	self.refs[netEntity.unit_number] = netEntity
-	print(#self.refs)
+	self.channels = self.channels + netEntity.channels
+	print("refs" .. #self.refs .. ", channels " .. self.channels)
 end
 
 --- @param netEntity NetEntity
 function Network:remove(netEntity)
 	netEntity.network = nil
 	self.refs:remove(netEntity.unit_number)
-	print(#self.refs)
+	self.channels = self.channels - netEntity.channels
+	print("refs" .. #self.refs .. ", channels " .. self.channels)
 end
 
 --- @param previous integer
 --- @param new integer
 function Network:updateChannels(previous, new)
 	self.channels = self.channels + (new - previous)
-	print(self.channels)
+	print("refs" .. #self.refs .. ", channels " .. self.channels)
 end
 
 --- @param unit_number integer

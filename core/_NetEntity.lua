@@ -13,7 +13,6 @@ local ObjectStorage = require("storage/objectStorage")
 --- @field unit_number integer
 --- @field internalCables LuaEntity[]
 --- @field childEntities LuaEntity[]
---- @field enabled boolean
 --- @field network Network|nil
 --- @field adjacent table<integer, NetEntity>
 --- @field channels integer
@@ -29,7 +28,10 @@ local networkCableName = require("proto/Cable").protoName
 --- @param event onEntityCreatedEvent
 function NetEntity.from(event)
 	local entity = event.created_entity
-	local self = NetEntity.storage:set(entity.unit_number, setmetatable({}, NetEntity))
+	local self = NetEntity.storage:get(entity.unit_number)
+	if self ~= nil then return self end
+
+	self = NetEntity.storage:set(entity.unit_number, setmetatable({}, NetEntity))
 
 	self.entity = entity
 	self.unit_number = entity.unit_number
@@ -37,7 +39,6 @@ function NetEntity.from(event)
 	self.internalCables = {}
 	self.childEntities = {}
 	self.adjacent = {}
-	self.enabled = false
 	self.channels = 0
 
 	if entity.name ~= networkCableName then
