@@ -30,6 +30,14 @@ function removeAlert(alertItem, unit_number)
 	if alertItem == nil then return end
 	Alerts.storage:set(unit_number, nil)
 	if alertItem.iconId ~= nil then rendering.destroy(alertItem.iconId) end
+
+	if alertItem.entity.valid then
+		for _, player in pairs(game.players) do
+			if player.connected and player.force == alertItem.entity.force then
+				player.remove_alert(alertItem)
+			end
+		end
+	end
 end
 
 function _ensureListener()

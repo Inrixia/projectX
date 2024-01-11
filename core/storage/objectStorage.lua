@@ -1,17 +1,13 @@
 --- @class ObjectStorage
---- @field rootStorage table
 --- @field key string
 local ObjectStorage = {}
 ObjectStorage.__index = ObjectStorage
 script.register_metatable("ObjectStorage", ObjectStorage)
 
---- @param rootStorage table
 --- @param key string
-function ObjectStorage.new(rootStorage, key)
-	if type(rootStorage) ~= "table" then error("rootStorage must be a table! Got type " .. type(rootStorage)) end
+function ObjectStorage.new(key)
 	local self = setmetatable({}, ObjectStorage)
 
-	self.rootStorage = rootStorage
 	self.key = key
 
 	return self
@@ -21,8 +17,8 @@ end
 --- @type ObjectStorage.ensureStorage
 function ObjectStorage:ensureRootStorage()
 	local key = self.key
-	if self.rootStorage[key] == nil then self.rootStorage[key] = {} end
-	local rootStorage = self.rootStorage[key]
+	if global[key] == nil then global[key] = {} end
+	local rootStorage = global[key]
 
 	--- @type ObjectStorage.ensureStorage
 	self.ensureRootStorage = function() return rootStorage end
@@ -33,8 +29,8 @@ end
 --- @return fun(table: table<K, V>, index?: K): K, V
 --- @return T
 function ObjectStorage:pairs()
-	if self.rootStorage[self.key] == nil then return pairs({}) end
-	return pairs(self.rootStorage[self.key])
+	if global[self.key] == nil then return pairs({}) end
+	return pairs(global[self.key])
 end
 
 --- @generic K, V
@@ -42,8 +38,8 @@ end
 --- @return K?
 --- @return V?
 function ObjectStorage:next(index)
-	if self.rootStorage[self.key] == nil then return nil end
-	return next(self.rootStorage[self.key], index)
+	if global[self.key] == nil then return nil end
+	return next(global[self.key], index)
 end
 
 --- @generic T

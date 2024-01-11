@@ -21,7 +21,7 @@ NetEntity = {}
 NetEntity.__index = NetEntity
 script.register_metatable("NetworkStorage", NetEntity)
 
-NetEntity.storage = ObjectStorage.new(global, "netEntity")
+NetEntity.storage = ObjectStorage.new("netEntity")
 
 local networkCableName = require("proto/Cable").protoName
 
@@ -118,9 +118,9 @@ end
 
 function NetEntity:remove()
 	local adjCount = 0
-	for _, adjacentStorage in pairs(self.adjacent) do
+	for _, adjacentNetEntity in pairs(self.adjacent) do
 		adjCount = adjCount + 1
-		adjacentStorage.adjacent[self.unit_number] = nil
+		adjacentNetEntity.adjacent[self.unit_number] = nil
 	end
 	for _, entity in ipairs(self.internalCables) do entity.destroy() end
 	for _, entity in ipairs(self.childEntities) do entity.destroy() end

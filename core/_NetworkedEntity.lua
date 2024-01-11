@@ -19,7 +19,7 @@ NetworkedEntity = {}
 NetworkedEntity.__index = NetworkedEntity
 setmetatable(NetworkedEntity, { __index = EntityBase })
 
-NetworkedEntity.protoStorage = ObjectStorage.new(global, "netEntityByProto")
+NetworkedEntity.protoStorage = ObjectStorage.new("netEntityByProto")
 
 --- @param tick integer
 --- @param method fun(netEntity: NetEntity, unit_number: integer, event: NthTickEventData, )

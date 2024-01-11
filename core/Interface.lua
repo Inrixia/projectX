@@ -101,5 +101,5 @@ interface:onGuiOpened(function(openedEvent)
 	filterButton.tags = { unit_number = entity.unit_number }
 
 	luaInterfaceGui.visible = true
-	-- player.opened = luaInterfaceGui
+	player.opened = luaInterfaceGui
 end)
