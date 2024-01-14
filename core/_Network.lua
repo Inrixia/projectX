@@ -14,49 +14,48 @@ Network.__index = Network
 
 script.register_metatable("Network", Network)
 
---- @param netEntity NetEntity?
-function Network.from(netEntity)
+--- @param netEnt NetEntity?
+function Network.from(netEnt)
 	local self = setmetatable({
 		channels = 0,
 		refs = Dict.new(),
 		onNoChannels = GenericEvent.new(),
 		onChannels = GenericEvent.new()
 	}, Network)
-	if netEntity ~= nil then self:add(netEntity) end
+	if netEnt ~= nil then self:add(netEnt) end
 	return self
 end
 
---- @param netEntity NetEntity
-function Network:add(netEntity)
-	netEntity.network = self
-	self.refs[netEntity.unit_number] = netEntity
+--- @param netEnt NetEntity
+function Network:add(netEnt)
+	netEnt.network = self
+	self.refs[netEnt.unit_number] = netEnt
 
-	self.onNoChannels:add(netEntity.unit_number, function()
-		if netEntity:base()._onNoChannels == nil then return end
-		netEntity:base()._onNoChannels(netEntity)
+	self.onNoChannels:add(netEnt.unit_number, function()
+		if netEnt:base()._onNoChannels == nil then return end
+		netEnt:base()._onNoChannels(netEnt)
 	end)
-	self.onChannels:add(netEntity.unit_number, function()
-		if netEntity:base()._onChannels == nil then return end
-		netEntity:base()._onChannels(netEntity)
+	self.onChannels:add(netEnt.unit_number, function()
+		if netEnt:base()._onChannels == nil then return end
+		netEnt:base()._onChannels(netEnt)
 	end)
 
-	if netEntity:base()._onChannels ~= nil then
-		netEntity:base()._onChannels(netEntity)
+	if netEnt:base()._onChannels ~= nil then
+		netEnt:base()._onChannels(netEnt)
 	end
 
-
-	self:updateChannels(netEntity.channels)
+	self:updateChannels(netEnt.channels)
 end
 
---- @param netEntity NetEntity
-function Network:remove(netEntity)
-	netEntity.network = nil
-	self.refs:remove(netEntity.unit_number)
+--- @param netEnt NetEntity
+function Network:remove(netEnt)
+	netEnt.network = nil
+	self.refs:remove(netEnt.unit_number)
 
-	self.onChannels:remove(netEntity.unit_number)
-	self.onNoChannels:remove(netEntity.unit_number)
+	self.onChannels:remove(netEnt.unit_number)
+	self.onNoChannels:remove(netEnt.unit_number)
 
-	self:updateChannels(netEntity.channels * -1)
+	self:updateChannels(netEnt.channels * -1)
 end
 
 --- @param diff integer
@@ -74,11 +73,11 @@ function Network:updateChannels(diff)
 end
 
 --- @param unit_number integer
---- @param netEntity NetEntity
+--- @param netEnt NetEntity
 --- @param visitedSet Dict
-local function depthFirstSearch(unit_number, netEntity, visitedSet)
-	visitedSet[unit_number] = netEntity
-	for unit_number, neighbor in pairs(netEntity.adjacent) do
+local function depthFirstSearch(unit_number, netEnt, visitedSet)
+	visitedSet[unit_number] = netEnt
+	for unit_number, neighbor in pairs(netEnt.adjacent) do
 		if visitedSet[unit_number] == nil then
 			depthFirstSearch(unit_number, neighbor, visitedSet)
 		end
@@ -156,8 +155,8 @@ function Network:merge(otherNet)
 		smallerNetwork = self
 	end
 
-	for _, netEntity in pairs(smallerNetwork.refs) do
-		largerNetwork:add(netEntity)
+	for _, netEnt in pairs(smallerNetwork.refs) do
+		largerNetwork:add(netEnt)
 	end
 
 	return largerNetwork

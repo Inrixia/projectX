@@ -23,7 +23,7 @@ NetEntity = {}
 NetEntity.__index = NetEntity
 script.register_metatable("NetworkStorage", NetEntity)
 
-NetEntity.storage = ObjectStorage.new("netEntity")
+NetEntity.storage = ObjectStorage.new("netEnt")
 
 local networkCableName = require("proto/Cable").protoName
 
@@ -109,13 +109,13 @@ end
 
 --- @param unit_number integer
 function NetEntity.getValid(unit_number)
-	local netEntity = NetEntity.storage:get(unit_number)
-	if netEntity == nil then return nil end
-	if not netEntity.entity.valid then
+	local netEnt = NetEntity.storage:get(unit_number)
+	if netEnt == nil then return nil end
+	if not netEnt.entity.valid then
 		NetEntity.storage:set(unit_number, nil)
 		return nil
 	end
-	return netEntity
+	return netEnt
 end
 
 --- @param entity LuaEntity

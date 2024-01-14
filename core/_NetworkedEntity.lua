@@ -13,19 +13,22 @@ local nthTick = require("events/nthTick")
 --- @field set fun(self: ObjectStorage, protoName: string, value: ProtoNetEntityStorage | nil)
 --- @field get fun(self: ObjectStorage, protoName: string): ProtoNetEntityStorage | nil
 
---- @alias NetEntMethod fun(netEntity: NetEntity, ...)
+--- @alias NetEntMethod fun(netEnt: NetEntity, ...)
 
 --- @class NetworkedEntity : EntityBase
 --- @field protoStorage NetEntityProtoStorage
 --- @field Lookup table<string, NetworkedEntity>
 --- @field _onNoChannels NetEntMethod
 --- @field _onChannels NetEntMethod
+--- @field _onJoinedNetwork NetEntMethod
+--- @field enable NetEntMethod
+--- @field disable NetEntMethod
 NetworkedEntity = {}
 NetworkedEntity.__index = NetworkedEntity
 setmetatable(NetworkedEntity, { __index = EntityBase })
 script.register_metatable("NetworkedEntity", NetworkedEntity)
 
-NetworkedEntity.protoStorage = ObjectStorage.new("netEntityByProto")
+NetworkedEntity.protoStorage = ObjectStorage.new("netEntByProto")
 NetworkedEntity.Lookup = {}
 
 
@@ -35,17 +38,17 @@ function NetworkedEntity.new(protoBase)
 	local self = setmetatable(EntityBase.new(protoBase), NetworkedEntity)
 
 	self:onEntityCreated(function(event)
-		local netEntity = NetEntity.from(event)
-		self.protoStorage:ensure(self.protoName, {})[netEntity.unit_number] = netEntity
+		local netEnt = NetEntity.from(event)
+		self.protoStorage:ensure(self.protoName, {})[netEnt.unit_number] = netEnt
 	end)
 
 	self:onEntityRemoved(function(event)
-		local netEntityStorage = self.protoStorage:get(self.protoName)
-		if netEntityStorage ~= nil then
-			local netEntity = netEntityStorage[event.entity.unit_number]
-			if netEntity ~= nil then
-				netEntity:destroy();
-				netEntityStorage[event.entity.unit_number] = nil
+		local netEntStorage = self.protoStorage:get(self.protoName)
+		if netEntStorage ~= nil then
+			local netEnt = netEntStorage[event.entity.unit_number]
+			if netEnt ~= nil then
+				netEnt:destroy();
+				netEntStorage[event.entity.unit_number] = nil
 			end
 		end
 	end)
@@ -56,7 +59,7 @@ function NetworkedEntity.new(protoBase)
 end
 
 --- @param tick integer
---- @param method fun(netEntity: NetEntity, unit_number: integer, event: NthTickEventData, )
+--- @param method fun(netEnt: NetEntity, unit_number: integer, event: NthTickEventData, )
 function NetworkedEntity:onNthTick(tick, method)
 	nthTick.add(tick, function(event)
 		self:forEachNetEntity(method, event)
@@ -64,19 +67,26 @@ function NetworkedEntity:onNthTick(tick, method)
 end
 
 --- @param method NetEntMethod
+function NetworkedEntity:onJoinedNetwork(method)
+	self._onJoinedNetwork = EntityBase.overloadMethod(self._onJoinedNetwork, method)
+	return self
+end
+
+--- @param method NetEntMethod
 function NetworkedEntity:forEachNetEntity(method, ...)
-	for _, netEntity in pairs(self.protoStorage:ensure(self.protoName, {})) do
-		if netEntity.entity.valid then
-			method(netEntity, ...)
+	for _, netEnt in pairs(self.protoStorage:ensure(self.protoName, {})) do
+		if netEnt.entity.valid then
+			method(netEnt, ...)
 		end
 	end
 end
 
---- @param method fun(netEntity: NetEntity, event: onEntityCreatedEvent)
+--- @param method fun(netEnt: NetEntity, event: onEntityCreatedEvent)
 function NetworkedEntity:onEntityCreatedWithStorage(method)
 	self:onEntityCreated(function(event)
 		method(NetEntity.from(event), event)
 	end)
+	return self
 end
 
 --- @param method NetEntMethod
@@ -88,6 +98,18 @@ end
 --- @param method NetEntMethod
 function NetworkedEntity:onChannels(method)
 	self._onChannels = EntityBase.overloadMethod(self._onChannels, method)
+	return self
+end
+
+--- @param method NetEntMethod
+function NetworkedEntity:onDisabled(method)
+	self.disable = EntityBase.overloadMethod(self.disable, method)
+	return self
+end
+
+--- @param method NetEntMethod
+function NetworkedEntity:onEnabled(method)
+	self.enable = EntityBase.overloadMethod(self.enable, method)
 	return self
 end
 
