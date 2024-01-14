@@ -31,20 +31,13 @@ function Network:add(netEnt)
 	netEnt.network = self
 	self.refs[netEnt.unit_number] = netEnt
 
-	self.onNoChannels:add(netEnt.unit_number, function()
-		if netEnt:base()._onNoChannels == nil then return end
-		netEnt:base()._onNoChannels(netEnt)
-	end)
-	self.onChannels:add(netEnt.unit_number, function()
-		if netEnt:base()._onChannels == nil then return end
-		netEnt:base()._onChannels(netEnt)
-	end)
+	self.onChannels:add(netEnt.unit_number, netEnt:overloadBaseMethod("_onChannels"))
+	self.onNoChannels:add(netEnt.unit_number, netEnt:overloadBaseMethod("_onNoChannels"))
 
-	if netEnt:base()._onChannels ~= nil then
-		netEnt:base()._onChannels(netEnt)
-	end
+	netEnt:onJoinedNetwork()
 
 	self:updateChannels(netEnt.channels)
+	print(#self.refs)
 end
 
 --- @param netEnt NetEntity

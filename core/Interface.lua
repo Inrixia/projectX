@@ -51,22 +51,19 @@ interface
 		netEnt:setChannels(-1);
 	end)
 	:onEnabled(function(netEnt)
-
+		netEnt.entity.operable = true
+		netEnt.entity.get_inventory(defines.inventory.chest).set_bar()
+		Alerts.resolve(netEnt.unit_number)
 	end)
-	:onNoChannels(function(netEnt)
+	:onDisabled(function(netEnt)
 		Alerts.raise(netEnt.entity, "Network overloaded! Not enough channels",
 			"utility/too_far_from_roboport_icon")
 		netEnt.entity.operable = false
 		netEnt.entity.get_inventory(defines.inventory.chest).set_bar(1)
 	end)
-	:onChannels(function(netEnt)
-		netEnt.entity.operable = true
-		netEnt.entity.get_inventory(defines.inventory.chest).set_bar()
-		Alerts.resolve(netEnt.unit_number)
-	end)
-	:onJoinedNetwork(function(netEnt)
-		Alerts.resolve(netEnt.unit_number)
-	end)
+	:onNoChannels(interface.disable)
+	:onChannels(interface.enable)
+	:onJoinedNetwork(interface.enable)
 	:onGuiOpened(function(openedEvent)
 		local entity = openedEvent.entity
 		if entity == nil then return end

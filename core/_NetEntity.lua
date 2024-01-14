@@ -73,7 +73,32 @@ function NetEntity.from(event)
 end
 
 function NetEntity:base()
-	return NetworkedEntity.Lookup[self.name]
+	local base = NetworkedEntity.Lookup[self.name];
+	self.base = function() return base end
+	return self.base()
+end
+
+local nullFun = function() end
+function NetEntity:onJoinedNetwork()
+	local base = self.base()
+	if base._onJoinedNetwork ~= nil then
+		self.onJoinedNetwork = function() base._onJoinedNetwork(self) end
+	else
+		self.onJoinedNetwork = nullFun
+	end
+	self:onJoinedNetwork()
+end
+
+function NetEntity:overloadBaseMethod(key)
+	if self[key] ~= nil then return self[key] end
+
+	local base = self:base()
+	if base[key] ~= nil then
+		self[key] = function() base[key](self) end
+	else
+		self[key] = nullFun
+	end
+	return self[key]
 end
 
 function NetEntity:destroy()
