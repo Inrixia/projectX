@@ -91,14 +91,4 @@ function NetworkedEntity:onChannels(method)
 	return self
 end
 
---- @param network Network
-function NetworkedEntity:listenToNetwork(network)
-	network.onChannels:add(self.protoName, function()
-		if self._onChannels ~= nil then self:forEachNetEntity(self._onChannels) end
-	end)
-	network.onNoChannels:add(self.protoName, function()
-		if self._onNoChannels ~= nil then self:forEachNetEntity(self._onNoChannels) end
-	end)
-end
-
 return NetworkedEntity

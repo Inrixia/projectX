@@ -13,25 +13,17 @@ interface:onEntityCreatedWithStorage(function(netEntity)
 	netEntity:setChannels(-1);
 end)
 
-interface:onNoChannels(function()
-	for unit_number, netEntity in pairs(interface.protoStorage:ensure(interface.protoName, {})) do
-		if netEntity.entity.valid then
-			Alerts.raise(netEntity.entity, "Network overloaded! Not enough channels",
-				"utility/too_far_from_roboport_icon")
-			netEntity.entity.operable = false
-			netEntity.entity.get_inventory(defines.inventory.chest).set_bar(1)
-		end
-	end
+interface:onNoChannels(function(netEntity)
+	Alerts.raise(netEntity.entity, "Network overloaded! Not enough channels",
+		"utility/too_far_from_roboport_icon")
+	netEntity.entity.operable = false
+	netEntity.entity.get_inventory(defines.inventory.chest).set_bar(1)
 end)
 
-interface:onChannels(function()
-	for unit_number, netEntity in pairs(interface.protoStorage:ensure(interface.protoName, {})) do
-		if netEntity.entity.valid then
-			netEntity.entity.operable = true
-			netEntity.entity.get_inventory(defines.inventory.chest).set_bar()
-			Alerts.resolve(netEntity.unit_number)
-		end
-	end
+interface:onChannels(function(netEntity)
+	netEntity.entity.operable = true
+	netEntity.entity.get_inventory(defines.inventory.chest).set_bar()
+	Alerts.resolve(netEntity.unit_number)
 end)
 
 local filterButton =

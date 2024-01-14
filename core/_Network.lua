@@ -19,8 +19,6 @@ function Network.from(netEntity)
 	local self = setmetatable({
 		channels = 0,
 		refs = Dict.new(),
-		protoRefs = Dict.new(),
-		eventListeners = {},
 		onNoChannels = GenericEvent.new(),
 		onChannels = GenericEvent.new()
 	}, Network)
@@ -33,14 +31,19 @@ function Network:add(netEntity)
 	netEntity.network = self
 	self.refs[netEntity.unit_number] = netEntity
 
-	local protoName = netEntity.name
-	local protoRefs = self.protoRefs[protoName];
-	if protoRefs == nil then
-		self.protoRefs[protoName] = 1
-		NetworkedEntity.Lookup[protoName]:listenToNetwork(self)
-	else
-		self.protoRefs[protoName] = self.protoRefs[protoName] + 1
+	self.onNoChannels:add(netEntity.unit_number, function()
+		if netEntity:base()._onNoChannels == nil then return end
+		netEntity:base()._onNoChannels(netEntity)
+	end)
+	self.onChannels:add(netEntity.unit_number, function()
+		if netEntity:base()._onChannels == nil then return end
+		netEntity:base()._onChannels(netEntity)
+	end)
+
+	if netEntity:base()._onChannels ~= nil then
+		netEntity:base()._onChannels(netEntity)
 	end
+
 
 	self:updateChannels(netEntity.channels)
 end
@@ -50,21 +53,15 @@ function Network:remove(netEntity)
 	netEntity.network = nil
 	self.refs:remove(netEntity.unit_number)
 
-	local protoName = netEntity.name
-	local refCount = (self.protoRefs[protoName] or 1) - 1
-	if refCount <= 0 then
-		self.protoRefs[protoName] = nil
-		self.onChannels:remove(protoName)
-		self.onNoChannels:remove(protoName)
-	else
-		self.protoRefs[protoName] = refCount
-	end
+	self.onChannels:remove(netEntity.unit_number)
+	self.onNoChannels:remove(netEntity.unit_number)
 
 	self:updateChannels(netEntity.channels * -1)
 end
 
 --- @param diff integer
 function Network:updateChannels(diff)
+	if diff == 0 then return end
 	local lastState = self.channels < 0;
 	self.channels = self.channels + diff
 	if lastState ~= (self.channels < 0) then

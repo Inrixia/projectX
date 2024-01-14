@@ -59,7 +59,11 @@ function NetEntity.from(event)
 	for _, adjacentEntity in pairs(self.findAdjacent(entity)) do
 		local adjacentNetEnt = self.storage:get(adjacentEntity.unit_number)
 		if adjacentNetEnt ~= nil then
-			self:joinNetwork(adjacentNetEnt.network)
+			if self.network == nil then
+				adjacentNetEnt.network:add(self)
+			else
+				self.network:merge(adjacentNetEnt.network)
+			end
 			self:addAdjacent(adjacentNetEnt)
 		end
 	end
@@ -68,27 +72,19 @@ function NetEntity.from(event)
 	return self
 end
 
---- @param network Network
-function NetEntity:joinNetwork(network)
-	if self.network == nil then
-		network:add(self)
-	else
-		self.network:merge(network)
-	end
+function NetEntity:base()
+	return NetworkedEntity.Lookup[self.name]
 end
 
 function NetEntity:destroy()
 	for _, entity in ipairs(self.internalCables) do entity.destroy() end
 	for _, entity in ipairs(self.childEntities) do entity.destroy() end
 
-	self:leaveNetwork()
-	self.storage:set(self.unit_number, nil)
-end
-
-function NetEntity:leaveNetwork()
 	self:removeSelfFromAdjacent()
 	self.network:remove(self)
 	if #self.adjacent > 1 then Network.split(self.adjacent) end
+
+	self.storage:set(self.unit_number, nil)
 end
 
 --- @param adjacent NetEntity

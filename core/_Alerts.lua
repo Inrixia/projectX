@@ -22,7 +22,7 @@ setmetatable(Alerts, { __index = Alerts })
 --- @field set fun(self: ObjectStorage, unit_number: integer, value: AlertItem | nil)
 --- @field get fun(self: ObjectStorage, unit_number: integer): AlertItem | nil
 --- @field getValid fun(self: ObjectStorage, unit_number: integer): AlertItem | nil
-Alerts.storage = ObjectStorage.new(global, "alerts")
+Alerts.storage = ObjectStorage.new("alerts")
 
 --- @param alertItem AlertItem|nil
 --- @param unit_number integer

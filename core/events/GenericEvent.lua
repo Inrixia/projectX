@@ -3,6 +3,8 @@
 local GenericEvent = {}
 GenericEvent.__index = GenericEvent
 
+script.register_metatable("GenericEvent", GenericEvent)
+
 function GenericEvent.new()
 	return setmetatable({ methods = {} }, GenericEvent)
 end
