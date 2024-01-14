@@ -1,8 +1,14 @@
 local Dict = require("storage/Dict")
+local GenericEvent = require("events/GenericEvent")
+
+--- @alias netEventFun fun(remove: fun())
 
 --- @class Network
 --- @field channels integer
 --- @field refs Dict
+--- @field protoRefs table<string, integer>
+--- @field onNoChannels GenericEvent
+--- @field onChannels GenericEvent
 Network = {}
 Network.__index = Network
 
@@ -10,9 +16,14 @@ script.register_metatable("Network", Network)
 
 --- @param netEntity NetEntity?
 function Network.from(netEntity)
-	local self = setmetatable({}, Network)
-	self.channels = 0
-	self.refs = Dict.new()
+	local self = setmetatable({
+		channels = 0,
+		refs = Dict.new(),
+		protoRefs = Dict.new(),
+		eventListeners = {},
+		onNoChannels = GenericEvent.new(),
+		onChannels = GenericEvent.new()
+	}, Network)
 	if netEntity ~= nil then self:add(netEntity) end
 	return self
 end
@@ -21,23 +32,48 @@ end
 function Network:add(netEntity)
 	netEntity.network = self
 	self.refs[netEntity.unit_number] = netEntity
-	self.channels = self.channels + netEntity.channels
-	print("refs" .. #self.refs .. ", channels " .. self.channels)
+
+	local protoName = netEntity.name
+	local protoRefs = self.protoRefs[protoName];
+	if protoRefs == nil then
+		self.protoRefs[protoName] = 1
+		NetworkedEntity.Lookup[protoName]:listenToNetwork(self)
+	else
+		self.protoRefs[protoName] = self.protoRefs[protoName] + 1
+	end
+
+	self:updateChannels(netEntity.channels)
 end
 
 --- @param netEntity NetEntity
 function Network:remove(netEntity)
 	netEntity.network = nil
 	self.refs:remove(netEntity.unit_number)
-	self.channels = self.channels - netEntity.channels
-	print("refs" .. #self.refs .. ", channels " .. self.channels)
+
+	local protoName = netEntity.name
+	local refCount = (self.protoRefs[protoName] or 1) - 1
+	if refCount <= 0 then
+		self.protoRefs[protoName] = nil
+		self.onChannels:remove(protoName)
+		self.onNoChannels:remove(protoName)
+	else
+		self.protoRefs[protoName] = refCount
+	end
+
+	self:updateChannels(netEntity.channels * -1)
 end
 
---- @param previous integer
---- @param new integer
-function Network:updateChannels(previous, new)
-	self.channels = self.channels + (new - previous)
-	print("refs" .. #self.refs .. ", channels " .. self.channels)
+--- @param diff integer
+function Network:updateChannels(diff)
+	local lastState = self.channels < 0;
+	self.channels = self.channels + diff
+	if lastState ~= (self.channels < 0) then
+		if self.channels < 0 then
+			self.onNoChannels:execute()
+		else
+			self.onChannels:execute()
+		end
+	end
 end
 
 --- @param unit_number integer
@@ -64,8 +100,8 @@ local function allKeysIn(tableA, tableB)
 end
 
 
---- @param netEntity NetEntity
-function Network.split(netEntity)
+--- @param newLeafs NetEntity[]
+function Network.split(newLeafs)
 	--- @type Dict[]
 	local visitedSets = {}
 	local largestSetSize = 0
@@ -80,13 +116,13 @@ function Network.split(netEntity)
 	end
 
 	-- Visit all nodes and track sets
-	for unit_number, adjacentNetEntity in pairs(netEntity.adjacent) do
+	for unit_number, adjacentNetEntity in pairs(newLeafs) do
 		if not haveVisited(unit_number) then
 			local visitedSet = Dict.new()
 			depthFirstSearch(unit_number, adjacentNetEntity, visitedSet)
 
 			-- If the first search returns all adjacent nodes then there is no new networks
-			if #visitedSets == 0 and allKeysIn(netEntity.adjacent, visitedSet) then return end
+			if #visitedSets == 0 and allKeysIn(newLeafs, visitedSet) then return end
 
 			table.insert(visitedSets, visitedSet)
 			if #visitedSet > largestSetSize then
@@ -108,20 +144,19 @@ function Network.split(netEntity)
 	end
 end
 
---- @param networkA Network
---- @param networkB Network
-function Network.merge(networkA, networkB)
-	if networkA == networkB then return end
+--- @param otherNet Network
+function Network:merge(otherNet)
+	if self == otherNet then return end
 
 	local largerNetwork
 	local smallerNetwork
 
-	if #networkA.refs >= #networkB.refs then
-		largerNetwork = networkA
-		smallerNetwork = networkB
+	if #self.refs >= #otherNet.refs then
+		largerNetwork = self
+		smallerNetwork = otherNet
 	else
-		largerNetwork = networkB
-		smallerNetwork = networkA
+		largerNetwork = otherNet
+		smallerNetwork = self
 	end
 
 	for _, netEntity in pairs(smallerNetwork.refs) do

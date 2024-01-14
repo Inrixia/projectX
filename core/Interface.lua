@@ -8,36 +8,31 @@ local Alerts = require("_Alerts")
 --- @class Interface : NetworkedEntity
 local interface = NetworkedEntity.new(require("proto/Interface"))
 
-
---- @param netEntity NetEntity
-function interface.tick(netEntity)
-	local entity = netEntity.entity
-
-	if netEntity.network.channels < 0 then
-		Alerts.raise(entity, "Network overloaded! Not enough channels", "utility/too_far_from_roboport_icon")
-		if entity.active then
-			entity.active = false
-			entity.operable = false
-			entity.get_inventory(defines.inventory.chest).set_bar(1)
-		end
-		return
-	end
-
-	if not entity.active then
-		entity.active = true
-		entity.operable = true
-		entity.get_inventory(defines.inventory.chest).set_bar()
-	end
-	Alerts.resolve(entity.unit_number)
-end
-
 interface:onEntityCreatedWithStorage(function(netEntity)
 	netEntity.entity.get_inventory(defines.inventory.chest).set_bar(1)
 	netEntity:setChannels(-1);
-	interface.tick(netEntity)
 end)
 
-interface:onNthTick(30, interface.tick)
+interface:onNoChannels(function()
+	for unit_number, netEntity in pairs(interface.protoStorage:ensure(interface.protoName, {})) do
+		if netEntity.entity.valid then
+			Alerts.raise(netEntity.entity, "Network overloaded! Not enough channels",
+				"utility/too_far_from_roboport_icon")
+			netEntity.entity.operable = false
+			netEntity.entity.get_inventory(defines.inventory.chest).set_bar(1)
+		end
+	end
+end)
+
+interface:onChannels(function()
+	for unit_number, netEntity in pairs(interface.protoStorage:ensure(interface.protoName, {})) do
+		if netEntity.entity.valid then
+			netEntity.entity.operable = true
+			netEntity.entity.get_inventory(defines.inventory.chest).set_bar()
+			Alerts.resolve(netEntity.unit_number)
+		end
+	end
+end)
 
 local filterButton =
 	GuiElement.new("filterButton", { type = "choose-elem-button", elem_type = "item" })

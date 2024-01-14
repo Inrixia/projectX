@@ -13,37 +13,26 @@ local nthTick = require("events/nthTick")
 --- @field set fun(self: ObjectStorage, protoName: string, value: ProtoNetEntityStorage | nil)
 --- @field get fun(self: ObjectStorage, protoName: string): ProtoNetEntityStorage | nil
 
+--- @alias NetEntMethod fun(netEntity: NetEntity, ...)
+
 --- @class NetworkedEntity : EntityBase
 --- @field protoStorage NetEntityProtoStorage
+--- @field Lookup table<string, NetworkedEntity>
+--- @field _onNoChannels NetEntMethod
+--- @field _onChannels NetEntMethod
 NetworkedEntity = {}
 NetworkedEntity.__index = NetworkedEntity
 setmetatable(NetworkedEntity, { __index = EntityBase })
+script.register_metatable("NetworkedEntity", NetworkedEntity)
 
 NetworkedEntity.protoStorage = ObjectStorage.new("netEntityByProto")
+NetworkedEntity.Lookup = {}
 
---- @param tick integer
---- @param method fun(netEntity: NetEntity, unit_number: integer, event: NthTickEventData, )
-function NetworkedEntity:onNthTick(tick, method)
-	nthTick.add(tick, function(event)
-		for unit_number, netEntity in pairs(self.protoStorage:ensure(self.protoName, {})) do
-			if netEntity.entity.valid then
-				method(netEntity, unit_number, event)
-			end
-		end
-	end)
-end
-
---- @param method fun(netEntity: NetEntity, event: onEntityCreatedEvent)
-function NetworkedEntity:onEntityCreatedWithStorage(method)
-	self:onEntityCreated(function(event)
-		method(NetEntity.from(event), event)
-	end)
-end
 
 --- @param protoBase ProtoBase
 function NetworkedEntity.new(protoBase)
+	--- @type NetworkedEntity
 	local self = setmetatable(EntityBase.new(protoBase), NetworkedEntity)
-	--- @cast self NetworkedEntity
 
 	self:onEntityCreated(function(event)
 		local netEntity = NetEntity.from(event)
@@ -55,13 +44,61 @@ function NetworkedEntity.new(protoBase)
 		if netEntityStorage ~= nil then
 			local netEntity = netEntityStorage[event.entity.unit_number]
 			if netEntity ~= nil then
-				netEntity:remove();
+				netEntity:destroy();
 				netEntityStorage[event.entity.unit_number] = nil
 			end
 		end
 	end)
 
+	self.Lookup[self.protoName] = self
+
 	return self
+end
+
+--- @param tick integer
+--- @param method fun(netEntity: NetEntity, unit_number: integer, event: NthTickEventData, )
+function NetworkedEntity:onNthTick(tick, method)
+	nthTick.add(tick, function(event)
+		self:forEachNetEntity(method, event)
+	end)
+end
+
+--- @param method NetEntMethod
+function NetworkedEntity:forEachNetEntity(method, ...)
+	for _, netEntity in pairs(self.protoStorage:ensure(self.protoName, {})) do
+		if netEntity.entity.valid then
+			method(netEntity, ...)
+		end
+	end
+end
+
+--- @param method fun(netEntity: NetEntity, event: onEntityCreatedEvent)
+function NetworkedEntity:onEntityCreatedWithStorage(method)
+	self:onEntityCreated(function(event)
+		method(NetEntity.from(event), event)
+	end)
+end
+
+--- @param method NetEntMethod
+function NetworkedEntity:onNoChannels(method)
+	self._onNoChannels = EntityBase.overloadMethod(self._onNoChannels, method)
+	return self
+end
+
+--- @param method NetEntMethod
+function NetworkedEntity:onChannels(method)
+	self._onChannels = EntityBase.overloadMethod(self._onChannels, method)
+	return self
+end
+
+--- @param network Network
+function NetworkedEntity:listenToNetwork(network)
+	network.onChannels:add(self.protoName, function()
+		if self._onChannels ~= nil then self:forEachNetEntity(self._onChannels) end
+	end)
+	network.onNoChannels:add(self.protoName, function()
+		if self._onNoChannels ~= nil then self:forEachNetEntity(self._onNoChannels) end
+	end)
 end
 
 return NetworkedEntity

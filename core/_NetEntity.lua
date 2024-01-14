@@ -1,5 +1,6 @@
 local Network = require("_Network")
 local ObjectStorage = require("storage/objectStorage")
+local Dict = require("storage/Dict")
 
 --- @class NetEntityStorage : ObjectStorage
 --- @field next fun(self: ObjectStorage, unit_number?: integer): integer?, NetEntity?
@@ -10,11 +11,12 @@ local ObjectStorage = require("storage/objectStorage")
 
 --- @class NetEntity
 --- @field entity LuaEntity
+--- @field name string
 --- @field unit_number integer
 --- @field internalCables LuaEntity[]
 --- @field childEntities LuaEntity[]
 --- @field network Network|nil
---- @field adjacent table<integer, NetEntity>
+--- @field adjacent Dict
 --- @field channels integer
 --- @field storage NetEntityStorage
 NetEntity = {}
@@ -34,11 +36,12 @@ function NetEntity.from(event)
 	self = NetEntity.storage:set(entity.unit_number, setmetatable({}, NetEntity))
 
 	self.entity = entity
+	self.name = entity.name
 	self.unit_number = entity.unit_number
 
 	self.internalCables = {}
 	self.childEntities = {}
-	self.adjacent = {}
+	self.adjacent = Dict.new()
 	self.channels = 0
 
 	if entity.name ~= networkCableName then
@@ -54,14 +57,10 @@ function NetEntity.from(event)
 	end
 
 	for _, adjacentEntity in pairs(self.findAdjacent(entity)) do
-		local adjacentNetEntity = self.storage:get(adjacentEntity.unit_number)
-		if adjacentNetEntity ~= nil then
-			if self.network == nil then
-				adjacentNetEntity.network:add(self)
-			else
-				Network.merge(self.network, adjacentNetEntity.network)
-			end
-			self:addAdjacent(adjacentNetEntity)
+		local adjacentNetEnt = self.storage:get(adjacentEntity.unit_number)
+		if adjacentNetEnt ~= nil then
+			self:joinNetwork(adjacentNetEnt.network)
+			self:addAdjacent(adjacentNetEnt)
 		end
 	end
 	if self.network == nil then Network.from(self) end
@@ -69,11 +68,58 @@ function NetEntity.from(event)
 	return self
 end
 
+--- @param network Network
+function NetEntity:joinNetwork(network)
+	if self.network == nil then
+		network:add(self)
+	else
+		self.network:merge(network)
+	end
+end
+
+function NetEntity:destroy()
+	for _, entity in ipairs(self.internalCables) do entity.destroy() end
+	for _, entity in ipairs(self.childEntities) do entity.destroy() end
+
+	self:leaveNetwork()
+	self.storage:set(self.unit_number, nil)
+end
+
+function NetEntity:leaveNetwork()
+	self:removeSelfFromAdjacent()
+	self.network:remove(self)
+	if #self.adjacent > 1 then Network.split(self.adjacent) end
+end
+
+--- @param adjacent NetEntity
+function NetEntity:addAdjacent(adjacent)
+	self.adjacent[adjacent.unit_number] = adjacent
+	adjacent.adjacent[self.unit_number] = self
+end
+
+function NetEntity:removeSelfFromAdjacent()
+	for _, adjacentNetEntity in pairs(self.adjacent) do
+		adjacentNetEntity.adjacent[self.unit_number] = nil
+	end
+end
+
 --- @param channels integer
+--- @returns integer
 function NetEntity:setChannels(channels)
 	if self.channels == channels then return end
-	self.network:updateChannels(self.channels, channels);
+	self.network:updateChannels(channels - self.channels)
 	self.channels = channels
+end
+
+--- @param unit_number integer
+function NetEntity.getValid(unit_number)
+	local netEntity = NetEntity.storage:get(unit_number)
+	if netEntity == nil then return nil end
+	if not netEntity.entity.valid then
+		NetEntity.storage:set(unit_number, nil)
+		return nil
+	end
+	return netEntity
 end
 
 --- @param entity LuaEntity
@@ -114,38 +160,6 @@ function NetEntity.findAdjacent(entity)
 	end
 
 	return adjacent_entities
-end
-
-function NetEntity:remove()
-	local adjCount = 0
-	for _, adjacentNetEntity in pairs(self.adjacent) do
-		adjCount = adjCount + 1
-		adjacentNetEntity.adjacent[self.unit_number] = nil
-	end
-	for _, entity in ipairs(self.internalCables) do entity.destroy() end
-	for _, entity in ipairs(self.childEntities) do entity.destroy() end
-
-	self.network:remove(self)
-	if adjCount > 1 then Network.split(self) end
-
-	self.storage:set(self.unit_number, nil)
-end
-
---- @param adjacent NetEntity
-function NetEntity:addAdjacent(adjacent)
-	self.adjacent[adjacent.unit_number] = adjacent
-	adjacent.adjacent[self.unit_number] = self
-end
-
---- @param unit_number integer
-function NetEntity.getValid(unit_number)
-	local netEntity = NetEntity.storage:get(unit_number)
-	if netEntity == nil then return nil end
-	if not netEntity.entity.valid then
-		NetEntity.storage:set(unit_number, nil)
-		return nil
-	end
-	return netEntity
 end
 
 return NetEntity

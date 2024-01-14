@@ -1,4 +1,4 @@
---- @class Dict
+--- @class Dict<T>
 --- @field private __count integer
 local Dict = {}
 Dict.__index = Dict
