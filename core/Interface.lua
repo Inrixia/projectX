@@ -49,20 +49,25 @@ interface
 	:onEntityCreatedWithStorage(function(netEnt)
 		netEnt.entity.get_inventory(defines.inventory.chest).set_bar(1)
 		netEnt:setChannels(-1);
+		netEnt:setEnergy(-1000);
 	end)
 	:onEnabled(function(netEnt)
 		netEnt.entity.operable = true
 		netEnt.entity.get_inventory(defines.inventory.chest).set_bar()
-		Alerts.resolve(netEnt.unit_number)
 	end)
 	:onDisabled(function(netEnt)
-		Alerts.raise(netEnt.entity, "Network overloaded! Not enough channels",
-			"utility/too_far_from_roboport_icon")
 		netEnt.entity.operable = false
 		netEnt.entity.get_inventory(defines.inventory.chest).set_bar(1)
 	end)
-	:onNoChannels(interface.disable)
-	:onChannels(interface.enable)
+	:onNoChannels(function(netEnt)
+		Alerts.raise(netEnt.entity, "Network overloaded! Not enough channels",
+			"utility/too_far_from_roboport_icon")
+		netEnt:disable()
+	end)
+	:onChannels(function(netEnt)
+		Alerts.resolve(netEnt.unit_number)
+		netEnt:enable()
+	end)
 	:onJoinedNetwork(interface.enable)
 	:onGuiOpened(function(openedEvent)
 		local entity = openedEvent.entity

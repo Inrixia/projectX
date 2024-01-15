@@ -1,12 +1,12 @@
 local ProtoBase = require("_ProtoBase")
 
 return ProtoBase.new("projectX_controller", function(prototypeName)
-	local entity = table.deepcopy(data.raw["lamp"]["small-lamp"])
-	entity.name = prototypeName
-	entity.gui_mode = "none"
+	local controller = table.deepcopy(data.raw["lamp"]["small-lamp"])
+	controller.name = prototypeName
+	controller.gui_mode = "none"
 
-	entity.energy_usage_per_tick = "250kW"
-	entity.always_on = true
+	controller.energy_usage_per_tick = "250kW"
+	controller.always_on = true
 
 	-- Item
 	local item = table.deepcopy(data.raw.item["iron-chest"])
@@ -21,5 +21,5 @@ return ProtoBase.new("projectX_controller", function(prototypeName)
 		ingredients = {}
 	}
 
-	data:extend { entity, item, recipe }
+	data:extend { controller, item, recipe }
 end)

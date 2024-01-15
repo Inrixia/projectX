@@ -3,6 +3,7 @@ local ProtoBase = require("_ProtoBase")
 return ProtoBase.new("projectX_interface", function(prototypeName)
 	local chest = table.deepcopy(data.raw["linked-container"]["linked-chest"])
 	chest.name = prototypeName
+	chest.minable.result = prototypeName
 	chest.inventory_size = 1
 	chest.inventory_type = "with_filters_and_bar"
 	chest.gui_mode = "none"

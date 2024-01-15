@@ -1,6 +1,7 @@
 local Network = require("_Network")
 local ObjectStorage = require("storage/objectStorage")
 local Dict = require("storage/Dict")
+local EntityBase = require("_EntityBase")
 
 --- @class NetEntityStorage : ObjectStorage
 --- @field next fun(self: ObjectStorage, unit_number?: integer): integer?, NetEntity?
@@ -14,10 +15,11 @@ local Dict = require("storage/Dict")
 --- @field name string
 --- @field unit_number integer
 --- @field internalCables LuaEntity[]
---- @field childEntities LuaEntity[]
+--- @field childEntities table<any, LuaEntity>
 --- @field network Network|nil
 --- @field adjacent Dict
 --- @field channels integer
+--- @field energy double
 --- @field storage NetEntityStorage
 NetEntity = {}
 NetEntity.__index = NetEntity
@@ -43,16 +45,11 @@ function NetEntity.from(event)
 	self.childEntities = {}
 	self.adjacent = Dict.new()
 	self.channels = 0
+	self.energy = 0
 
 	if entity.name ~= networkCableName then
 		self.internalCables = {
-			entity.surface.create_entity({
-				name = networkCableName,
-				position = entity.position,
-				player = entity.last_user,
-				force = entity.force,
-				create_build_effect_smoke = false,
-			})
+			EntityBase.createOnEntity(entity, networkCableName)
 		}
 	end
 
@@ -82,11 +79,31 @@ local nullFun = function() end
 function NetEntity:onJoinedNetwork()
 	local base = self.base()
 	if base._onJoinedNetwork ~= nil then
-		self.onJoinedNetwork = function() base._onJoinedNetwork(self) end
+		self.onJoinedNetwork = base._onJoinedNetwork
 	else
 		self.onJoinedNetwork = nullFun
 	end
 	self:onJoinedNetwork()
+end
+
+function NetEntity:disable()
+	local base = self.base()
+	if base.disable ~= nil then
+		self.disable = base.disable
+	else
+		self.disable = nullFun
+	end
+	self:disable()
+end
+
+function NetEntity:enable()
+	local base = self.base()
+	if base.enable ~= nil then
+		self.enable = base.enable
+	else
+		self.enable = nullFun
+	end
+	self:enable()
 end
 
 function NetEntity:overloadBaseMethod(key)
@@ -103,7 +120,7 @@ end
 
 function NetEntity:destroy()
 	for _, entity in ipairs(self.internalCables) do entity.destroy() end
-	for _, entity in ipairs(self.childEntities) do entity.destroy() end
+	for _, entity in pairs(self.childEntities) do entity.destroy() end
 
 	self:removeSelfFromAdjacent()
 	self.network:remove(self)
@@ -130,6 +147,14 @@ function NetEntity:setChannels(channels)
 	if self.channels == channels then return end
 	self.network:updateChannels(channels - self.channels)
 	self.channels = channels
+end
+
+--- @param energy double
+--- @returns double
+function NetEntity:setEnergy(energy)
+	if self.energy == energy then return end
+	self.network:updateEnergy(energy - self.energy)
+	self.energy = energy
 end
 
 --- @param unit_number integer

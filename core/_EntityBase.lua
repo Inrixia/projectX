@@ -51,6 +51,19 @@ function EntityBase.overloadMethod(originalMethod, newMethod, newFirst)
 	end
 end
 
+--- @param entity LuaEntity
+--- @param protoName string
+--- @returns LuaEntity
+function EntityBase.createOnEntity(entity, protoName)
+	return entity.surface.create_entity({
+		name = protoName,
+		position = entity.position,
+		player = entity.last_user,
+		force = entity.force,
+		create_build_effect_smoke = false,
+	})
+end
+
 --- @param method EntityBase.onEntityCreated
 --- @returns EntityBase
 function EntityBase:onEntityCreated(method)

@@ -20,6 +20,8 @@ local nthTick = require("events/nthTick")
 --- @field Lookup table<string, NetworkedEntity>
 --- @field _onNoChannels NetEntMethod
 --- @field _onChannels NetEntMethod
+--- @field _onNoEnergy NetEntMethod
+--- @field _onEnergy NetEntMethod
 --- @field _onJoinedNetwork NetEntMethod
 --- @field enable NetEntMethod
 --- @field disable NetEntMethod
@@ -64,6 +66,7 @@ function NetworkedEntity:onNthTick(tick, method)
 	nthTick.add(tick, function(event)
 		self:forEachNetEntity(method, event)
 	end)
+	return self
 end
 
 --- @param method NetEntMethod
@@ -98,6 +101,18 @@ end
 --- @param method NetEntMethod
 function NetworkedEntity:onChannels(method)
 	self._onChannels = EntityBase.overloadMethod(self._onChannels, method)
+	return self
+end
+
+--- @param method NetEntMethod
+function NetworkedEntity:onNoEnergy(method)
+	self._onNoEnergy = EntityBase.overloadMethod(self._onNoEnergy, method)
+	return self
+end
+
+--- @param method NetEntMethod
+function NetworkedEntity:onEnergy(method)
+	self._onEnergy = EntityBase.overloadMethod(self._onEnergy, method)
 	return self
 end
 

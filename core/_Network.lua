@@ -5,10 +5,12 @@ local GenericEvent = require("events/GenericEvent")
 
 --- @class Network
 --- @field channels integer
+--- @field energy double
 --- @field refs Dict
---- @field protoRefs table<string, integer>
 --- @field onNoChannels GenericEvent
 --- @field onChannels GenericEvent
+--- @field onNoEnergy GenericEvent
+--- @field onEnergy GenericEvent
 Network = {}
 Network.__index = Network
 
@@ -18,9 +20,12 @@ script.register_metatable("Network", Network)
 function Network.from(netEnt)
 	local self = setmetatable({
 		channels = 0,
+		energy = 0,
 		refs = Dict.new(),
 		onNoChannels = GenericEvent.new(),
-		onChannels = GenericEvent.new()
+		onChannels = GenericEvent.new(),
+		onNoEnergy = GenericEvent.new(),
+		onEnergy = GenericEvent.new()
 	}, Network)
 	if netEnt ~= nil then self:add(netEnt) end
 	return self
@@ -33,11 +38,13 @@ function Network:add(netEnt)
 
 	self.onChannels:add(netEnt.unit_number, netEnt:overloadBaseMethod("_onChannels"))
 	self.onNoChannels:add(netEnt.unit_number, netEnt:overloadBaseMethod("_onNoChannels"))
+	self.onEnergy:add(netEnt.unit_number, netEnt:overloadBaseMethod("_onEnergy"))
+	self.onNoEnergy:add(netEnt.unit_number, netEnt:overloadBaseMethod("_onNoEnergy"))
 
 	netEnt:onJoinedNetwork()
 
 	self:updateChannels(netEnt.channels)
-	print(#self.refs)
+	self:updateEnergy(netEnt.energy)
 end
 
 --- @param netEnt NetEntity
@@ -47,8 +54,11 @@ function Network:remove(netEnt)
 
 	self.onChannels:remove(netEnt.unit_number)
 	self.onNoChannels:remove(netEnt.unit_number)
+	self.onEnergy:remove(netEnt.unit_number)
+	self.onNoEnergy:remove(netEnt.unit_number)
 
 	self:updateChannels(netEnt.channels * -1)
+	self:updateEnergy(netEnt.energy * -1)
 end
 
 --- @param diff integer
@@ -61,6 +71,20 @@ function Network:updateChannels(diff)
 			self.onNoChannels:execute()
 		else
 			self.onChannels:execute()
+		end
+	end
+end
+
+--- @param diff double
+function Network:updateEnergy(diff)
+	if diff == 0 then return end
+	local lastState = self.energy < 0;
+	self.energy = self.energy + diff
+	if lastState ~= (self.energy < 0) then
+		if self.energy < 0 then
+			self.onNoEnergy:execute()
+		else
+			self.onEnergy:execute()
 		end
 	end
 end
