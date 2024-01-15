@@ -1,5 +1,5 @@
 local Dict = require("storage/Dict")
-local GenericEvent = require("events/GenericEvent")
+local NetworkEvent = require("events/NetworkEvent")
 
 --- @alias netEventFun fun(remove: fun())
 
@@ -22,10 +22,10 @@ function Network.from(netEnt)
 		channels = 0,
 		energy = 0,
 		refs = Dict.new(),
-		onNoChannels = GenericEvent.new(),
-		onChannels = GenericEvent.new(),
-		onNoEnergy = GenericEvent.new(),
-		onEnergy = GenericEvent.new()
+		onNoChannels = NetworkEvent.new("onNoChannels"),
+		onChannels = NetworkEvent.new("onChannels"),
+		onNoEnergy = NetworkEvent.new("onNoEnergy"),
+		onEnergy = NetworkEvent.new("onEnergy")
 	}, Network)
 	if netEnt ~= nil then self:add(netEnt) end
 	return self
@@ -36,10 +36,10 @@ function Network:add(netEnt)
 	netEnt.network = self
 	self.refs[netEnt.unit_number] = netEnt
 
-	self.onChannels:add(netEnt.unit_number, netEnt:overloadBaseMethod("_onChannels"))
-	self.onNoChannels:add(netEnt.unit_number, netEnt:overloadBaseMethod("_onNoChannels"))
-	self.onEnergy:add(netEnt.unit_number, netEnt:overloadBaseMethod("_onEnergy"))
-	self.onNoEnergy:add(netEnt.unit_number, netEnt:overloadBaseMethod("_onNoEnergy"))
+	self.onChannels:add(netEnt)
+	self.onNoChannels:add(netEnt)
+	self.onEnergy:add(netEnt)
+	self.onNoEnergy:add(netEnt)
 
 	netEnt:onJoinedNetwork()
 

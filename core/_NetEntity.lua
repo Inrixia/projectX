@@ -30,43 +30,43 @@ NetEntity.storage = ObjectStorage.new("netEnt")
 local networkCableName = require("proto/Cable").protoName
 
 --- @param event onEntityCreatedEvent
-function NetEntity.from(event)
+function NetEntity:from(event)
 	local entity = event.created_entity
-	local self = NetEntity.storage:get(entity.unit_number)
-	if self ~= nil then return self end
+	local _self = NetEntity.storage:get(entity.unit_number)
+	if _self ~= nil then return _self end
 
-	self = NetEntity.storage:set(entity.unit_number, setmetatable({}, NetEntity))
+	_self = NetEntity.storage:set(entity.unit_number, setmetatable({}, self))
 
-	self.entity = entity
-	self.name = entity.name
-	self.unit_number = entity.unit_number
+	_self.entity = entity
+	_self.name = entity.name
+	_self.unit_number = entity.unit_number
 
-	self.internalCables = {}
-	self.childEntities = {}
-	self.adjacent = Dict.new()
-	self.channels = 0
-	self.energy = 0
+	_self.internalCables = {}
+	_self.childEntities = {}
+	_self.adjacent = Dict.new()
+	_self.channels = 0
+	_self.energy = 0
 
 	if entity.name ~= networkCableName then
-		self.internalCables = {
+		_self.internalCables = {
 			EntityBase.createOnEntity(entity, networkCableName)
 		}
 	end
 
-	for _, adjacentEntity in pairs(self.findAdjacent(entity)) do
-		local adjacentNetEnt = self.storage:get(adjacentEntity.unit_number)
+	for _, adjacentEntity in pairs(_self.findAdjacent(entity)) do
+		local adjacentNetEnt = _self.storage:get(adjacentEntity.unit_number)
 		if adjacentNetEnt ~= nil then
-			if self.network == nil then
-				adjacentNetEnt.network:add(self)
+			if _self.network == nil then
+				adjacentNetEnt.network:add(_self)
 			else
-				self.network:merge(adjacentNetEnt.network)
+				_self.network:merge(adjacentNetEnt.network)
 			end
-			self:addAdjacent(adjacentNetEnt)
+			_self:addAdjacent(adjacentNetEnt)
 		end
 	end
-	if self.network == nil then Network.from(self) end
+	if _self.network == nil then Network.from(_self) end
 
-	return self
+	return _self
 end
 
 function NetEntity:base()
@@ -75,48 +75,12 @@ function NetEntity:base()
 	return self.base()
 end
 
-local nullFun = function() end
-function NetEntity:onJoinedNetwork()
-	local base = self.base()
-	if base._onJoinedNetwork ~= nil then
-		self.onJoinedNetwork = base._onJoinedNetwork
-	else
-		self.onJoinedNetwork = nullFun
-	end
-	self:onJoinedNetwork()
-end
-
-function NetEntity:disable()
-	local base = self.base()
-	if base.disable ~= nil then
-		self.disable = base.disable
-	else
-		self.disable = nullFun
-	end
-	self:disable()
-end
-
-function NetEntity:enable()
-	local base = self.base()
-	if base.enable ~= nil then
-		self.enable = base.enable
-	else
-		self.enable = nullFun
-	end
-	self:enable()
-end
-
-function NetEntity:overloadBaseMethod(key)
-	if self[key] ~= nil then return self[key] end
-
-	local base = self:base()
-	if base[key] ~= nil then
-		self[key] = function() base[key](self) end
-	else
-		self[key] = nullFun
-	end
-	return self[key]
-end
+local nullFunc = function() end
+NetEntity.onJoinedNetwork = nullFunc
+NetEntity.onChannels = nil
+NetEntity.onNoChannels = nil
+NetEntity.disable = nil
+NetEntity.enable = nil
 
 function NetEntity:destroy()
 	for _, entity in ipairs(self.internalCables) do entity.destroy() end

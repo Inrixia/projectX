@@ -5,8 +5,37 @@ local GuiElement = require("_GuiElement")
 
 local Alerts = require("_Alerts")
 
+--- @class NetInterface : NetEntity
+NetInterface = {}
+NetInterface.__index = NetInterface
+setmetatable(NetInterface, { __index = NetEntity })
+script.register_metatable("NetInterface", NetInterface)
+
+function NetInterface:enable()
+	self.entity.operable = true
+	self.entity.get_inventory(defines.inventory.chest).set_bar()
+end
+
+function NetInterface:disable()
+	self.entity.operable = false
+	self.entity.get_inventory(defines.inventory.chest).set_bar(1)
+end
+
+function NetInterface:onNoChannels()
+	Alerts.raise(self.entity, "SOEMTHIGN DIFEERNT",
+		"utility/too_far_from_roboport_icon")
+	self:disable()
+end
+
+function NetInterface:onChannels()
+	Alerts.resolve(self.unit_number)
+	self:enable()
+end
+
+NetInterface.onJoinedNetwork = NetInterface.enable
+
 --- @class Interface : NetworkedEntity
-local interface = NetworkedEntity.new(require("proto/Interface"))
+local interface = NetworkedEntity.new(require("proto/Interface"), NetInterface)
 
 local filterButton =
 	GuiElement.new("filterButton", { type = "choose-elem-button", elem_type = "item" })
@@ -51,24 +80,6 @@ interface
 		netEnt:setChannels(-1);
 		netEnt:setEnergy(-1000);
 	end)
-	:onEnabled(function(netEnt)
-		netEnt.entity.operable = true
-		netEnt.entity.get_inventory(defines.inventory.chest).set_bar()
-	end)
-	:onDisabled(function(netEnt)
-		netEnt.entity.operable = false
-		netEnt.entity.get_inventory(defines.inventory.chest).set_bar(1)
-	end)
-	:onNoChannels(function(netEnt)
-		Alerts.raise(netEnt.entity, "Network overloaded! Not enough channels",
-			"utility/too_far_from_roboport_icon")
-		netEnt:disable()
-	end)
-	:onChannels(function(netEnt)
-		Alerts.resolve(netEnt.unit_number)
-		netEnt:enable()
-	end)
-	:onJoinedNetwork(interface.enable)
 	:onGuiOpened(function(openedEvent)
 		local entity = openedEvent.entity
 		if entity == nil then return end

@@ -1,12 +1,22 @@
 local NetworkedEntity = require("_NetworkedEntity")
+local NetEntity = require("_NetEntity")
 
-NetworkedEntity.new(require("proto/Cable"))
-	:onChannels(function(netEnt)
-		netEnt.entity.temperature = 1
-	end)
-	:onNoChannels(function(netEnt)
-		netEnt.entity.temperature = 0
-	end)
-	:onJoinedNetwork(function(netEnt)
-		netEnt.entity.temperature = netEnt.network.channels
-	end)
+--- @class NetCable : NetEntity
+NetCable = {}
+NetCable.__index = NetCable
+setmetatable(NetCable, { __index = NetEntity })
+script.register_metatable("NetCable", NetCable)
+
+function NetCable:onChannels()
+	self.entity.temperature = 1
+end
+
+function NetCable:onNoChannels()
+	self.entity.temperature = 0
+end
+
+function NetCable:onJoinedNetwork()
+	self.entity.temperature = self.network.channels
+end
+
+NetworkedEntity.new(require("proto/Cable"), NetCable)
