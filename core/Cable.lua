@@ -7,11 +7,11 @@ NetCable.__index = NetCable
 setmetatable(NetCable, { __index = NetEntity })
 script.register_metatable("NetCable", NetCable)
 
-function NetCable:onChannels()
+function NetCable:enable()
 	self.entity.temperature = 1
 end
 
-function NetCable:onNoChannels()
+function NetCable:disable()
 	self.entity.temperature = 0
 end
 

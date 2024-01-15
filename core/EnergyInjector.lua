@@ -10,5 +10,4 @@ energyInjector
 		netEnt.entity.power_usage = math.max((netEnt.network.energy * -1) + netEnt.energy, 0)
 
 		netEnt:setEnergy(math.min(netEnt.entity.power_usage, netEnt.entity.energy))
-		print(netEnt.network.energy, netEnt.entity.energy, netEnt.entity.power_usage)
 	end)

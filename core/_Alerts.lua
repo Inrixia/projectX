@@ -41,6 +41,7 @@ function Alerts.storage:firstAlertPairs()
 		else
 			if not firstAlert.entity.valid then
 				removeAlert(firstAlert, unit_number)
+				return self:firstAlertPairs()(alerts, next_unit_number)
 			end
 			-- Return the current storage unit number and the first alert
 			return next_unit_number, firstAlert
@@ -80,7 +81,11 @@ function _ensureListener()
 
 		for _, firstAlert in Alerts.storage:firstAlertPairs() do
 			if firstAlert.iconId ~= nil then
-				rendering.set_visible(firstAlert.iconId, (event.tick / 30) % 2 ~= 0)
+				if rendering.is_valid(firstAlert.iconId) then
+					rendering.set_visible(firstAlert.iconId, (event.tick / 30) % 2 ~= 0)
+				else
+					firstAlert.iconId = nil
+				end
 			end
 		end
 	end)
@@ -142,7 +147,9 @@ end
 --- @param unit_number integer
 --- @param message LocalisedString
 function Alerts.resolve(unit_number, message)
-	removeAlert(Alerts.storage:get(unit_number)[message], unit_number)
+	local entityAlerts = Alerts.storage:get(unit_number)
+	if entityAlerts == nil then return end
+	removeAlert(entityAlerts[message], unit_number)
 end
 
 return Alerts

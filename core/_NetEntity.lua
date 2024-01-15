@@ -44,8 +44,8 @@ function NetEntity:from(event)
 	_self.internalCables = {}
 	_self.childEntities = {}
 	_self.adjacent = Dict.new()
-	_self.channels = 0
-	_self.energy = 0
+	_self.channels = _self.channels or 0
+	_self.energy = _self.energy or 0
 
 	if entity.name ~= networkCableName then
 		_self.internalCables = {

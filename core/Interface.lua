@@ -11,6 +11,9 @@ NetInterface.__index = NetInterface
 setmetatable(NetInterface, { __index = NetEntity })
 script.register_metatable("NetInterface", NetInterface)
 
+NetInterface.energy = -1000
+NetInterface.channels = -1
+
 function NetInterface:enable()
 	self.entity.operable = true
 	self.entity.get_inventory(defines.inventory.chest).set_bar()
@@ -22,25 +25,19 @@ function NetInterface:disable()
 end
 
 function NetInterface:onNoChannels()
-	Alerts.raise(self.entity, "Network overloaded! Not enough channels",
-		"utility/too_far_from_roboport_icon")
-	self:disable()
+	Alerts.raise(self.entity, "Network overloaded! Not enough channels", "utility/too_far_from_roboport_icon")
 end
 
 function NetInterface:onChannels()
 	Alerts.resolve(self.unit_number, "Network overloaded! Not enough channels")
-	self:enable()
 end
 
 function NetInterface:onNoEnergy()
-	Alerts.raise(self.entity, "Network does not have enough energy!",
-		"utility/electricity_icon_unplugged")
-	self:disable()
+	Alerts.raise(self.entity, "Network does not have enough energy!", "utility/electricity_icon_unplugged")
 end
 
 function NetInterface:onEnergy()
 	Alerts.resolve(self.unit_number, "Network does not have enough energy!")
-	self:enable()
 end
 
 --- @class Interface : NetworkedEntity
@@ -86,8 +83,6 @@ local interfaceGui = GuiElement
 interface
 	:onEntityCreatedWithStorage(function(netEnt)
 		netEnt.entity.get_inventory(defines.inventory.chest).set_bar(1)
-		netEnt:setChannels(-1);
-		netEnt:setEnergy(-1000);
 	end)
 	:onGuiOpened(function(openedEvent)
 		local entity = openedEvent.entity
