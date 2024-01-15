@@ -22,17 +22,26 @@ function NetInterface:disable()
 end
 
 function NetInterface:onNoChannels()
-	Alerts.raise(self.entity, "SOEMTHIGN DIFEERNT",
+	Alerts.raise(self.entity, "Network overloaded! Not enough channels",
 		"utility/too_far_from_roboport_icon")
 	self:disable()
 end
 
 function NetInterface:onChannels()
-	Alerts.resolve(self.unit_number)
+	Alerts.resolve(self.unit_number, "Network overloaded! Not enough channels")
 	self:enable()
 end
 
-NetInterface.onJoinedNetwork = NetInterface.enable
+function NetInterface:onNoEnergy()
+	Alerts.raise(self.entity, "Network does not have enough energy!",
+		"utility/electricity_icon_unplugged")
+	self:disable()
+end
+
+function NetInterface:onEnergy()
+	Alerts.resolve(self.unit_number, "Network does not have enough energy!")
+	self:enable()
+end
 
 --- @class Interface : NetworkedEntity
 local interface = NetworkedEntity.new(require("proto/Interface"), NetInterface)

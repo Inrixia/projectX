@@ -43,8 +43,21 @@ function Network:add(netEnt)
 
 	netEnt:onJoinedNetwork()
 
-	self:updateChannels(netEnt.channels)
-	self:updateEnergy(netEnt.energy)
+	if (self:updateChannels(netEnt.channels)) then
+		if self.channels < 0 then
+			if netEnt.onNoChannels then netEnt:onNoChannels() end
+		else
+			if netEnt.onChannels then netEnt:onChannels() end
+		end
+	end
+
+	if (self:updateEnergy(netEnt.energy)) then
+		if self.energy < 0 then
+			if netEnt.onNoEnergy then netEnt:onNoEnergy() end
+		else
+			if netEnt.onEnergy then netEnt:onEnergy() end
+		end
+	end
 end
 
 --- @param netEnt NetEntity
@@ -72,7 +85,9 @@ function Network:updateChannels(diff)
 		else
 			self.onChannels:execute()
 		end
+		return false
 	end
+	return true
 end
 
 --- @param diff double
@@ -86,7 +101,9 @@ function Network:updateEnergy(diff)
 		else
 			self.onEnergy:execute()
 		end
+		return false
 	end
+	return true
 end
 
 --- @param unit_number integer

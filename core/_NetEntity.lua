@@ -79,6 +79,8 @@ local nullFunc = function() end
 NetEntity.onJoinedNetwork = nullFunc
 NetEntity.onChannels = nil
 NetEntity.onNoChannels = nil
+NetEntity.onEnergy = nil
+NetEntity.onNoEnergy = nil
 NetEntity.disable = nil
 NetEntity.enable = nil
 
