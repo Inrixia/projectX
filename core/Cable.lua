@@ -15,8 +15,4 @@ function NetCable:onNoChannels()
 	self.entity.temperature = 0
 end
 
-function NetCable:onJoinedNetwork()
-	self.entity.temperature = self.network.channels
-end
-
 NetworkedEntity.new(require("proto/Cable"), NetCable)

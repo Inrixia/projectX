@@ -41,8 +41,6 @@ function Network:add(netEnt)
 	self.onEnergy:add(netEnt)
 	self.onNoEnergy:add(netEnt)
 
-	netEnt:onJoinedNetwork()
-
 	if (self:updateChannels(netEnt.channels)) then
 		if self.channels < 0 then
 			if netEnt.onNoChannels then netEnt:onNoChannels() end
