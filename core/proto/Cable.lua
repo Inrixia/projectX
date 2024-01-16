@@ -1,4 +1,10 @@
+--- @type callOn
+local callOn = require("__projectX__/core/lib/object")
 local ProtoBase = require("_ProtoBase")
+
+local function escapePattern(text)
+	return text:gsub("([%(%)%.%%%+%-%*%?%[%]%^%$])", "%%%1")
+end
 
 return ProtoBase.new("projectX_cable", function(prototypeName)
 	local cable = table.deepcopy(data.raw["heat-pipe"]["heat-pipe"])
@@ -9,6 +15,20 @@ return ProtoBase.new("projectX_cable", function(prototypeName)
 	cable.heat_buffer.min_working_temperature = 0
 	cable.heat_buffer.minimum_glow_temperature = 0
 	cable.heat_buffer.default_temperature = 0
+
+	local base = escapePattern("__base__/graphics/entity/heat-pipe")
+	local new = "__projectX__/graphics/cable-blue"
+
+	--- @param spriteParams data.SpriteParameters
+	callOn(cable.heat_glow_sprites, "filename", function(spriteParams)
+		spriteParams.filename = spriteParams.filename:gsub(base, new)
+		spriteParams.draw_as_glow = true
+	end)
+	--- @param spriteParams data.SpriteParameters
+	callOn(cable.connection_sprites, "filename", function(spriteParams)
+		spriteParams.filename = spriteParams.filename:gsub(base, new)
+	end)
+
 	-- Item
 	local item = table.deepcopy(data.raw.item["iron-chest"])
 	item.name = prototypeName
