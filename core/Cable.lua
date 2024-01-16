@@ -7,6 +7,8 @@ NetCable.__index = NetCable
 setmetatable(NetCable, { __index = NetEntity })
 script.register_metatable("NetCable", NetCable)
 
+NetCable.energy = -100
+
 function NetCable:enable()
 	self.entity.temperature = 1
 end

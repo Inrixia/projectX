@@ -17,8 +17,9 @@ function NetworkEvent:add(netEnt)
 	self.netEnts[netEnt.unit_number] = netEnt
 end
 
-function NetworkEvent:remove(key)
-	self.netEnts[key] = nil
+--- @param netEnt NetEntity
+function NetworkEvent:remove(netEnt)
+	self.netEnts[netEnt.unit_number] = nil
 end
 
 function NetworkEvent:execute(...)
@@ -26,7 +27,7 @@ function NetworkEvent:execute(...)
 		if netEnt.entity.valid then
 			netEnt[self.methodKey](netEnt, ...)
 		else
-			self:remove(unit_number)
+			self.netEnts[unit_number] = nil
 		end
 	end
 end

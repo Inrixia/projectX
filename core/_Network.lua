@@ -7,12 +7,13 @@ local NetworkEvent = require("events/NetworkEvent")
 --- @field channels integer
 --- @field energy double
 --- @field refs Dict
---- @field onNoChannels GenericEvent
---- @field onChannels GenericEvent
---- @field onNoEnergy GenericEvent
---- @field onEnergy GenericEvent
---- @field onEnable GenericEvent
---- @field onDisable GenericEvent
+--- @field onNoChannels NetworkEvent
+--- @field onChannels NetworkEvent
+--- @field onNoEnergy NetworkEvent
+--- @field onEnergy NetworkEvent
+--- @field onRequestEnergy NetworkEvent
+--- @field onEnable NetworkEvent
+--- @field onDisable NetworkEvent
 Network = {}
 Network.__index = Network
 
@@ -28,6 +29,7 @@ function Network.from(netEnt)
 		onChannels = NetworkEvent.new("onChannels"),
 		onNoEnergy = NetworkEvent.new("onNoEnergy"),
 		onEnergy = NetworkEvent.new("onEnergy"),
+		onRequestEnergy = NetworkEvent.new("onRequestEnergy"),
 		onEnable = NetworkEvent.new("enable"),
 		onDisable = NetworkEvent.new("disable")
 	}, Network)
@@ -45,22 +47,26 @@ function Network:add(netEnt)
 	self.onEnergy:add(netEnt)
 	self.onNoEnergy:add(netEnt)
 
+	self.onRequestEnergy:add(netEnt)
+
 	self.onDisable:add(netEnt)
 	self.onEnable:add(netEnt)
 
-	self:updateChannels(netEnt.channels)
-	if self:hasChannels() then
-		if netEnt.onChannels then netEnt:onChannels() end
-	else
-		if netEnt.onNoChannels then netEnt:onNoChannels() end
+	if (not self:updateChannels(netEnt.channels)) then
+		if self:hasChannels() then
+			if netEnt.onChannels then netEnt:onChannels() end
+		else
+			if netEnt.onNoChannels then netEnt:onNoChannels() end
+		end
 	end
 
 
-	self:updateEnergy(netEnt.energy)
-	if self:hasEnergy() then
-		if netEnt.onEnergy then netEnt:onEnergy() end
-	else
-		if netEnt.onNoEnergy then netEnt:onNoEnergy() end
+	if ((not self:requestEnergy(netEnt.energy)) and (not self:updateEnergy(netEnt.energy))) then
+		if self:hasEnergy() then
+			if netEnt.onEnergy then netEnt:onEnergy() end
+		else
+			if netEnt.onNoEnergy then netEnt:onNoEnergy() end
+		end
 	end
 
 	if self:enabled() then
@@ -75,13 +81,14 @@ function Network:remove(netEnt)
 	netEnt.network = nil
 	self.refs:remove(netEnt.unit_number)
 
-	self.onChannels:remove(netEnt.unit_number)
-	self.onNoChannels:remove(netEnt.unit_number)
-	self.onEnergy:remove(netEnt.unit_number)
-	self.onNoEnergy:remove(netEnt.unit_number)
+	self.onChannels:remove(netEnt)
+	self.onNoChannels:remove(netEnt)
+	self.onEnergy:remove(netEnt)
+	self.onNoEnergy:remove(netEnt)
 
-	self.onEnable:remove(netEnt.unit_number)
-	self.onDisable:remove(netEnt.unit_number)
+
+	self.onEnable:remove(netEnt)
+	self.onDisable:remove(netEnt)
 
 	self:updateChannels(netEnt.channels * -1)
 	self:updateEnergy(netEnt.energy * -1)
@@ -115,7 +122,22 @@ function Network:updateChannels(diff)
 		else
 			self.onNoChannels:execute()
 		end
+		return true
 	end
+	return false
+end
+
+--- @param energyRequired integer
+function Network:requestEnergy(energyRequired)
+	if energyRequired >= 0 then return false end
+	local energyChanged = self.energy + energyRequired
+	self.energy = energyChanged
+	self.onRequestEnergy:execute()
+	if self.energy == energyChanged then
+		self.energy = self.energy - energyRequired
+		return false
+	end
+	return true
 end
 
 function Network:hasEnergy() return self.energy >= 0 end
@@ -131,7 +153,9 @@ function Network:updateEnergy(diff)
 		else
 			self.onNoEnergy:execute()
 		end
+		return true
 	end
+	return false
 end
 
 --- @param unit_number integer
